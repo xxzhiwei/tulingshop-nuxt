@@ -4,7 +4,7 @@
             <div class="swiper-box">
                 <div class="nav-menu">
                     <ul class="menu-wrap">
-                        <li class="menu-item">
+                        <!-- <li class="menu-item">
                             <a href="javascript:;">手机 电话卡</a>
                             <div class="children">
                                 <ul v-for="(item,i) in menuList" v-bind:key="i">
@@ -16,21 +16,24 @@
                                     </li>
                                 </ul>
                             </div>
-                        </li>
-                        <li class="menu-item" v-for="(item,i) in cateList" v-bind:key="i">
-                            <a href="javascript:;" @mouseover="detailProductList($event)">{{item.name}}</a>
-                        </li>
+                        </li> -->
 
+                        <!-- 还可以建立另外一张表，结构与分类一致 -->
+                        <li class="menu-item" v-for="item in categoryList" v-bind:key="item.id">
+                            <a href="javascript:;">{{ item.name }}</a>
+                            <div class="children" v-if="item.children">
+                                <ul>
+                                    <li v-for="(item1) in item.children" v-bind:key="item1.id">
+                                        <a v-bind:href="'/search?keywords=' + (item1.keywords ? item1.keywords : '全部商品')" target="_blank">
+                                            {{item1.name}}
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </li>
                     </ul>
                 </div>
-                <!-- <swiper v-bind:options="swiperOption">
-                    <swiper-slide v-for="(item,index) in slideList" v-bind:key="index">
-                        <a v-bind:href="'/#/product/'+item.url"><img v-bind:src="item.pic"></a>
-                    </swiper-slide>
-                    <div class="swiper-pagination" slot="pagination"></div>
-                    <div class="swiper-button-prev" slot="button-prev"></div>
-                    <div class="swiper-button-next" slot="button-next"></div>
-                </swiper> -->
+
                 <div v-swiper:mySwiper="swiperOption">
                     <div class="swiper-wrapper">
                         <div
@@ -54,13 +57,10 @@
                         slot="button-next"
                     ></div>
                 </div>
-
-
-
             </div>
-            <div class="ads-box">
+            <div class="tulingAdsbox">
                 <a v-bind:href="'/#/product/'+item.id" v-for="(item,index) in adsList" v-bind:key="index">
-                    <img src="/imgs/banner-1.png" alt="">
+                    <img :src="item.imageUrl" alt="">
                 </a>
             </div>
             <div class="banner">
@@ -132,11 +132,16 @@
 import { mapActions } from "vuex";
 import ServiceBar from "@/components/ServiceBar";
 import Modal from "@/components/Modal";
-// import { swiper, swiperSlide } from "vue-awesome-swiper";
-// import { getCookie } from "@/util/support";
-// import "swiper/dist/css/swiper.css";
+
+import { getAggregation } from "@/api/index";
+
 const pb1 = require("@/assets/product-bg-1.png");
 const pb3 = require("@/assets/product-bg-3.png");
+
+// 会被adblock拦截
+const ad1 = require("@/assets/ads/ad-1.jpeg");
+const ad2 = require("@/assets/ads/ad-2.jpeg");
+const ad3 = require("@/assets/ads/ad-3.jpeg");
 
 export default {
     layout: "main-template",
@@ -150,13 +155,18 @@ export default {
     data() {
         return {
             swiperOption: {
-                autoplay: true,
-                loop: true,
-                effect: "cube",
-                cubeEffect: {
-                    shadowOffset: 100,
-                    shadowScale: 0.6,
+                autoplay: {
+                    delay: 4000
                 },
+                loop: true,
+                effect: "fade",
+                fadeEffect: {
+                    crossFade: true
+                },
+                // cubeEffect: {
+                //     shadowOffset: 100,
+                //     shadowScale: 0.6,
+                // },
                 pagination: {
                     el: ".swiper-pagination",
                     clickable: true,
@@ -217,21 +227,46 @@ export default {
                 [0, 0, 0, 0],
                 [0, 0, 0, 0],
             ],
-            adsList: [],
+            adsList: [{
+                id: 1,
+                imageUrl: ad1,
+                title: 'ad1',
+                linkUrl: 'http://www.baidu.com'
+            }, {
+                id: 2,
+                imageUrl: ad2,
+                title: 'ad2',
+                linkUrl: 'http://www.baidu.com'
+            }, {
+                id: 3,
+                imageUrl: ad3,
+                title: 'ad3',
+                linkUrl: 'http://www.baidu.com'
+            }],
             phoneList: [],
             flashpromotion: [],
             showModal: false,
             cateList: [],
+            categoryList: []
         };
     },
     mounted() {
         // this.init();
+        this.getAggregation();
     },
     methods: {
+        async getAggregation() {
+            const resp = await getAggregation();
+            if (resp.code !== 0) {
+                throw new Error("获取数据失败");
+            }
+            const { categoryList } = resp.data;
+            this.categoryList = categoryList;
+        },
         init() {
-            this.axios.get("/home/productCateList/0").then((res) => {
-                this.cateList = res;
-            });
+            // this.axios.get("/home/productCateList/0").then((res) => {
+            //     this.cateList = res;
+            // });
 
             this.axios.get("/home/content").then((res) => {
                 this.slideList = res.advertiseList;
@@ -308,12 +343,14 @@ export default {
                         border: 1px solid $colorH;
                         ul {
                             display: flex;
-                            justify-content: space-between;
+                            // justify-content: space-between;
+                            flex-wrap: wrap;
                             height: 75px;
                             li {
                                 height: 75px;
                                 line-height: 75px;
-                                flex: 1;
+                                // flex: 1;
+                                width: 120px;
                                 padding-left: 23px;
                             }
                             a {
@@ -342,17 +379,22 @@ export default {
             }
         }
     }
-    .ads-box {
+    // 被adblock拦截了
+    .tulingAdsbox {
         @include flex();
         margin-top: 14px;
-        margin-bottom: 31px;
+        margin-bottom: 14px;
+        justify-content: normal;
         a {
             width: 296px;
             height: 167px;
         }
+        a:not(:first-child) {
+            margin-left: 14px;
+        }
     }
     .banner {
-        margin-bottom: 50px;
+        margin-bottom: 28px;
     }
     .product-box {
         background-color: $colorJ;

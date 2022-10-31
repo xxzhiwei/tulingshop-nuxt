@@ -1,6 +1,6 @@
 <template>
     <div>
-        <NavHeader />
+        <NavHeader v-on:search="search" />
         <nuxt />
         <NavFooter />
     </div>
@@ -14,5 +14,16 @@ export default {
         NavHeader,
         NavFooter,
     },
+    methods: {
+        search(keywords) {
+            this.$router.push({
+                path: "/search",
+                query: {
+                    keywords
+                },
+                replace: true
+            });
+        }
+    }
 };
 </script>

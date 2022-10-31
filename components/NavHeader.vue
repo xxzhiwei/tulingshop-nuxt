@@ -3,7 +3,7 @@
         <div class="nav-topbar">
             <div class="container">
                 <div class="topbar-menu">
-                    <a href="javascript:;">小米商城</a>
+                    <a href="javascript:;">图灵商城</a>
                     <a href="javascript:;">MUI</a>
                     <a href="javascript:;">云服务</a>
                     <a href="javascript:;">协议规则</a>
@@ -22,92 +22,10 @@
                 <div class="header-logo">
                     <a href="/#/index"></a>
                 </div>
-                <div class="header-menu">
-                    <div class="item-menu">
-                        <span>热销产品</span>
-                        <div class="children">
-                            <ul>
-                                <li class="product" v-for="(item,index) in phoneList" :key="index">
-                                    <a v-bind:href="'/#/product/'+item.id" target="_blank">
-                                        <div class="pro-img">
-                                            <img v-lazy="item.mainImage" :alt="item.subtitle">
-                                        </div>
-                                        <div class="pro-name">{{item.name}}</div>
-                                        <div class="pro-price">{{item.price | currency}}</div>
-                                    </a>
-                                </li>
-                            </ul>
-                        </div>
-                    </div>
-                    <div class="item-menu">
-                        <span>RedMi红米</span>
-                    </div>
-                    <div class="item-menu">
-                        <span>电视</span>
-                        <div class="children">
-                            <ul>
-                                <li class="product">
-                                    <a href="" target="_blank">
-                                        <div class="pro-img">
-                                            <img v-lazy="'/imgs/nav-img/nav-3-1.jpg'" alt="">
-                                        </div>
-                                        <div class="pro-name">小米壁画电视 65英寸</div>
-                                        <div class="pro-price">6999元</div>
-                                    </a>
-                                </li>
-                                <li class="product">
-                                    <a href="" target="_blank">
-                                        <div class="pro-img">
-                                            <img v-lazy="'/imgs/nav-img/nav-3-2.jpg'" alt="">
-                                        </div>
-                                        <div class="pro-name">小米全面屏电视E55A</div>
-                                        <div class="pro-price">1999元</div>
-                                    </a>
-                                </li>
-                                <li class="product">
-                                    <a href="" target="_blank">
-                                        <div class="pro-img">
-                                            <img v-lazy="'/imgs/nav-img/nav-3-3.png'" alt="">
-                                        </div>
-                                        <div class="pro-name">小米电视4A 32英寸</div>
-                                        <div class="pro-price">699元</div>
-                                    </a>
-                                </li>
-                                <li class="product">
-                                    <a href="" target="_blank">
-                                        <div class="pro-img">
-                                            <img v-lazy="'/imgs/nav-img/nav-3-4.jpg'" alt="">
-                                        </div>
-                                        <div class="pro-name">小米电视4A 55英寸</div>
-                                        <div class="pro-price">1799元</div>
-                                    </a>
-                                </li>
-                                <li class="product">
-                                    <a href="" target="_blank">
-                                        <div class="pro-img">
-                                            <img v-lazy="'/imgs/nav-img/nav-3-5.jpg'" alt="">
-                                        </div>
-                                        <div class="pro-name">小米电视4A 65英寸</div>
-                                        <div class="pro-price">2699元</div>
-                                    </a>
-                                </li>
-                                <li class="product">
-                                    <a href="" target="_blank">
-                                        <div class="pro-img">
-                                            <img v-lazy="'/imgs/nav-img/nav-3-6.png'" alt="">
-                                        </div>
-                                        <div class="pro-name">查看全部</div>
-                                        <div class="pro-price">查看全部</div>
-                                    </a>
-                                </li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
                 <div class="header-search">
                     <div class="wrapper">
-                        <input type="text" v-model="keyword" name="keyword">
-                        <a href="javascript:;" @click="doSearch()"></a>
+                        <input type="text" v-model="keywords" name="keywords" placeholder="请输入关键字">
+                        <a href="javascript:;" @click="search()"></a>
                     </div>
                 </div>
             </div>
@@ -122,57 +40,7 @@ export default {
     name: "nav-header",
     data() {
         return {
-            phoneList: [
-                {
-                    id: 1,
-                    mainImage: "/imgs/nav-img/nav-3-1.jpg",
-                    subtitle: "产品名称",
-                    name: "产品名称",
-                    price: 1000,
-                    currency: "元",
-                },
-                {
-                    id: 2,
-                    mainImage: "/imgs/nav-img/nav-3-2.jpg",
-                    subtitle: "产品名称",
-                    name: "产品名称",
-                    price: 1000,
-                    currency: "元",
-                },
-                {
-                    id: 3,
-                    mainImage: "/imgs/nav-img/nav-3-3.png",
-                    subtitle: "产品名称",
-                    name: "产品名称",
-                    price: 1000,
-                    currency: "元",
-                },
-                {
-                    id: 4,
-                    mainImage: "/imgs/nav-img/nav-3-4.jpg",
-                    subtitle: "产品名称",
-                    name: "产品名称",
-                    price: 1000,
-                    currency: "元",
-                },
-                {
-                    id: 5,
-                    mainImage: "/imgs/nav-img/nav-3-5.jpg",
-                    subtitle: "产品名称",
-                    name: "产品名称",
-                    price: 1000,
-                    currency: "元",
-                },
-                {
-                    id: 6,
-                    mainImage: "/imgs/nav-img/nav-3-6.png",
-                    subtitle: "产品名称",
-                    name: "产品名称",
-                    price: 1000,
-                    currency: "元",
-                },
-            ],
-            keyword: "请输入产品关键字",
+            keywords: "",
         };
     },
     computed: {
@@ -182,27 +50,11 @@ export default {
         cartCount() {
             return "this.$store.state.cartCount";
         },
-        //   ...mapState(['username','cartCount'])
-    },
-    filters: {
-        currency(val) {
-            if (!val) return "0.00";
-            return "￥" + val.toFixed(2) + "元";
-        },
-    },
-    mounted() {
-        this.getProductList();
-        let params = this.$route.params;
-        if (params && params.from == "login") {
-            this.getCartCount();
-        }
     },
     methods: {
         login() {
             this.$router.push("/login");
         },
-        getProductList() {},
-        getCartCount() {},
         logout() {
             this.$cookie.set("token", "");
             this.$cookie.set("username", "");
@@ -210,14 +62,17 @@ export default {
             this.$store.dispatch("saveUserName", "");
             this.$store.dispatch("saveCartCount", "0");
         },
-        doSearch() {
-            this.$router.push(`/searchResult/${this.keyword}`).catch((err) => {
-                window.console.log(err);
-            });
-        },
+        // doSearch() {
+        //     this.$router.push(`/searchResult/${this.keywords}`).catch((err) => {
+        //         window.console.log(err);
+        //     });
+        // },
         goToCart() {
             this.$router.push("/cart");
         },
+        search() {
+            this.$emit("search", this.keywords);
+        }
     },
 };
 </script>
