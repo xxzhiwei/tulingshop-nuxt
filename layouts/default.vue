@@ -16,12 +16,12 @@ export default {
     },
     methods: {
         search(keywords) {
+            console.log(keywords);
             this.$router.push({
                 path: "/search",
                 query: {
                     keywords
-                },
-                replace: true
+                }
             });
         }
     }

@@ -62,16 +62,12 @@ export default {
             this.$store.dispatch("saveUserName", "");
             this.$store.dispatch("saveCartCount", "0");
         },
-        // doSearch() {
-        //     this.$router.push(`/searchResult/${this.keywords}`).catch((err) => {
-        //         window.console.log(err);
-        //     });
-        // },
         goToCart() {
             this.$router.push("/cart");
         },
         search() {
             this.$emit("search", this.keywords);
+            this.keywords = "";
         }
     },
 };
