@@ -4,15 +4,17 @@
         <div class="wrapper">
             <div class="container clearfix">
                 <div class="left">
-                    <img v-lazy="detail.pic" alt="">
+                    <div class="image-wrapper">
+                        <img v-lazy="detail.pic" alt="">
+                    </div>
                 </div>
                 <div class="content">
-                    <h2 class="item-title">{{ skuDetail.name || '-' }}</h2>
+                    <h2 class="item-title">{{ detail.name }}</h2>
                     <p class="item-info">{{ detail.subTitle }}</p>
-                    <div class="item-price">{{ skuDetail.price || 0 }}元</div>
+                    <div class="item-price">{{ skuDetail.price || detail.price  }}元</div>
                     <div class="line"></div>
                     <div class="item-version clearfix" v-for="(item) of detail.saleAttrs" :key="item.id">
-                        <h2>选择{{item.name}}</h2>
+                        <h2 style="font-weight: 500;">选择{{item.name}}</h2>
                         <div class="phone fr"
                             v-for="(saleAttrItem, index) of item.items"
                             :key="saleAttrItem.name"
@@ -22,13 +24,17 @@
                     </div>
                     <div class="item-total">
                         <div class="phone-info clearfix">
-                            <div class="stock">
-                                <i class="fa fa-exclamation-triangle f2" aria-hidden="true"></i>
-                                请选择规格
-                            </div>
-                            <!-- <div class="fr" v-if="skuName" v-html="skuName"></div> -->
+                            
+                            <template v-if="skuDetail.id">
+                                <div class="fl" >
+                                    {{skuDetail.name}}
+                                </div>
+                                <div class="fr">
+                                    {{skuDetail.price}}元
+                                </div>
+                            </template>
                         </div>
-                        <div class="phone-total">总计：111元</div>
+                        <div class="phone-total">总计：{{skuDetail.price || 0}}元</div>
                     </div>
                     <div class="btn-group">
                         <a href="javascript:;" class="btn btn-large fl">加入购物车</a>
@@ -58,13 +64,17 @@
         <div class="price-info">
             <div class="container">
                 <h2>商品介绍</h2>
-                <!-- <div class="attributes">
-                    <ul class="attributes-list">
-                        <li v-for="(item, index) in detail.productAttributeValueList" :key="index">
-                            {{ item.attrName }}:&nbsp;{{ item.value }}
-                        </li>
-                    </ul>
-                </div> -->
+                <template v-if="detail.attrGroups && detail.attrGroups.length > 0">
+                    <div style="font-size: 16px; margin-bottom: 8px;">规格属性</div>
+                    <div class="group-wrapper" v-for="(item) in detail.attrGroups" :key="item.id">
+                        <div class="group-name">{{item.name}}</div>
+                        <ul>
+                            <li v-for="(item2) in item.attrs" :key="item2.id">
+                                {{ item2.name }}:&nbsp;{{ item2.value }}
+                            </li>
+                        </ul>
+                    </div>
+                </template>
                 <!-- <div class="desc" v-html="detail.detailHtml"> -->
                     <!-- <img src="/imgs/detail/item-price.jpeg" alt=""> -->
                 <!-- </div> -->
@@ -88,7 +98,7 @@ export default {
     },
     async asyncData({ params }) {
         const { id } = params;
-        const resp = await getDetail(id);
+        const resp = await getDetail(44);
         if (resp.code !== 0) {
             throw new Error("获取数据失败");
         }
@@ -124,7 +134,7 @@ export default {
             if (resp.code !== 0) {
                 throw new Error("获取sku数据失败");
             }
-            return resp.data;
+            this.skuDetail = resp.data;
         },
         /**
          * 检查每个属性是否都包含『当前选择的属性中的skuId』，如果没有则取消高亮；如果全部销售属性都选中了的情况下（高亮），将会决定一个skuId，此时应该重新向后台请求数据
@@ -134,38 +144,66 @@ export default {
          */
         onSaleAttrChange(currentSaleAttr, currentSaleAttrItem, currentIndex) {
             if (this.disabledMap[currentSaleAttr.id + ':' + currentIndex]) {
-                console.log(1);
                 return;
             }
-            this.activedMap[currentSaleAttr.id] = currentIndex;
-
-            for (let saleAttr of this.detail.saleAttrs) {
-                if (saleAttr.id === currentSaleAttr.id) {
-                    continue;
-                }
-                // 获取其他属性的高亮选项的下标，并用其的skuIds与currentSaleAttrItem的skuIds取交集，如果交集为空集则取消高亮
-                const otherIndex = this.activedMap[saleAttr.id];
-
-                for (let i=0; i<saleAttr.items.length; i++) {
-                    const result = getIntersection(currentSaleAttrItem.skuIds.split(","), saleAttr.items[i].skuIds.split(","));
-                    
-                    // 若没有交集，则取消高亮，并禁用选项
-                    if (result.length === 0) {
-                        if (otherIndex === i) {
-                            this.activedMap[saleAttr.id] = -1;
-                        }
-                        this.disabledMap[saleAttr.id + ':' + i] = true;
+            // 取消选择时，把禁用状态恢复，其他不变
+            if (this.activedMap[currentSaleAttr.id] === currentIndex) {
+                this.activedMap[currentSaleAttr.id] = -1;
+                for (let saleAttr of this.detail.saleAttrs) {
+                    // 由于选择当前属性时，不会影响到自己，所以跳过
+                    if (saleAttr.id === currentSaleAttr.id) {
+                        continue;
                     }
-                    // 取消禁用
-                    else {
-                        this.disabledMap[saleAttr.id + ':' + i] = false;
+                    for (let i=0; i<saleAttr.items.length; i++) {
+                        if (this.disabledMap[saleAttr.id + ':' + i]) {
+                            this.disabledMap[saleAttr.id + ':' + i] = false;
+                        }
                     }
                 }
             }
+            // 选择
+            else {
+                this.activedMap[currentSaleAttr.id] = currentIndex;
+                let currentSkuIds = currentSaleAttrItem.skuIds.split(",");
+                let matched;
 
-            // this.activedMap的属性都不为-1，
-            // const skuId = getIntersection();
-            // this.getSkuDetail(skuId);
+                for (let saleAttr of this.detail.saleAttrs) {
+                    if (saleAttr.id === currentSaleAttr.id) {
+                        continue;
+                    }
+                    // 获取其他属性的高亮选项的下标，并用其的skuIds与currentSaleAttrItem的skuIds取交集，如果交集为空集则取消高亮
+                    const otherIndex = this.activedMap[saleAttr.id];
+
+                    for (let i=0; i<saleAttr.items.length; i++) {
+                        const result = getIntersection(currentSkuIds, saleAttr.items[i].skuIds.split(","));
+                        // 若没有交集，则取消高亮，并禁用选项
+                        if (result.length === 0) {
+                            if (otherIndex === i) {
+                                this.activedMap[saleAttr.id] = -1;
+                                matched = null;
+                            }
+                            this.disabledMap[saleAttr.id + ':' + i] = true;
+                        }
+                        // 取消禁用
+                        else {
+                            // 如果有交集，并且i为当前高亮的选项时，将交集赋予matched
+                            if (otherIndex === i) {
+                                matched = result;
+                            }
+                            else {
+                                matched = null;
+                            }
+                            this.disabledMap[saleAttr.id + ':' + i] = false;
+                        }
+                    }
+                }
+
+                // 若每个属性都有相同的skuId，则认为是匹配成功【只会有一个】
+                if (matched) {
+                    const skuId = matched[0];
+                    this.getSkuDetail(skuId);
+                }
+            }
         }
     },
 };
@@ -175,25 +213,43 @@ export default {
 @import "@/assets/scss/mixin.scss";
 
 .detail {
+    .group-wrapper {
+        color: #666;
+        .group-name {
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+        ul {
+            padding-left: 10px;
+        }
+        li {
+            margin-bottom: 5px;
+        }
+    }
     .stock {
         margin-top: 15px;
         color: #ff6700;
     }
     .wrapper {
+        > .container { 
+            display: flex;
+        }
         .left {
-            float: left;
             width: 642px;
             height: 617px;
             margin-top: 5px;
+            .image-wrapper {
+                width: 600px;
+            }
             img {
                 width: 100%;
                 height: 100%;
             }
         }
         .content {
-            float: right;
             width: 584px;
             height: auto;
+            margin-left: 20px;
             .item-title {
                 font-size: 28px;
                 padding-top: 30px;
@@ -258,7 +314,7 @@ export default {
                 border-top: 1px solid #e5e5e5;
             }
             .item-addr {
-                height: 108px;
+                // height: 108px;
                 background-color: #fafafa;
                 border: 1px solid #e5e5e5;
                 box-sizing: border-box;
@@ -338,10 +394,13 @@ export default {
         }
     }
     .price-info {
-        text-align: center;
         background-color: #f3f3f3;
         height: auto;
+        margin-top: 20px;
+        padding-bottom: 30px;
         h2 {
+
+            text-align: center;
             font-size: 24px;
             color: #333333;
             padding-top: 38px;
