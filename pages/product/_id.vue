@@ -17,7 +17,7 @@
                         <h2 style="font-weight: 500;">选择{{item.name}}</h2>
                         <div class="phone fr"
                             v-for="(saleAttrItem, index) of item.items"
-                            :key="saleAttrItem.name"
+                            :key="saleAttrItem.value"
                             :class="[{checked: activedMap[item.id] === index, disabled: disabledMap[item.id + ':' + index]}]" @click="onSaleAttrChange(item, saleAttrItem, index)">
                             {{saleAttrItem.value}}
                         </div>
@@ -98,14 +98,14 @@ export default {
     },
     async asyncData({ params }) {
         const { id } = params;
-        const resp = await getDetail(44);
+        const resp = await getDetail(id);
         if (resp.code !== 0) {
             throw new Error("获取数据失败");
         }
 
         // spuId=44；
-        resp.data.saleAttrs[0].items[0].skuIds = "27";
-        resp.data.saleAttrs[1].items[1].skuIds = "28";
+        // resp.data.saleAttrs[0].items[0].skuIds = "27";
+        // resp.data.saleAttrs[1].items[1].skuIds = "28";
 
         // 高亮映射
         const activedMap = {};
@@ -122,7 +122,7 @@ export default {
         return {
             detail: resp.data,
             skuDetail: {},
-            activedMap, disabledMap
+            activedMap, disabledMap,
         }
     },
     // created() {
@@ -146,6 +146,8 @@ export default {
             if (this.disabledMap[currentSaleAttr.id + ':' + currentIndex]) {
                 return;
             }
+
+            let currentSkuIds = currentSaleAttrItem.skuIds.split(",");
             // 取消选择时，把禁用状态恢复，其他不变
             if (this.activedMap[currentSaleAttr.id] === currentIndex) {
                 this.activedMap[currentSaleAttr.id] = -1;
@@ -154,6 +156,7 @@ export default {
                     if (saleAttr.id === currentSaleAttr.id) {
                         continue;
                     }
+
                     for (let i=0; i<saleAttr.items.length; i++) {
                         if (this.disabledMap[saleAttr.id + ':' + i]) {
                             this.disabledMap[saleAttr.id + ':' + i] = false;
@@ -164,9 +167,8 @@ export default {
             // 选择
             else {
                 this.activedMap[currentSaleAttr.id] = currentIndex;
-                let currentSkuIds = currentSaleAttrItem.skuIds.split(",");
-                let matched;
-
+                const skuIdMap = {}; // 用于统计选中的skuId
+                let target;
                 for (let saleAttr of this.detail.saleAttrs) {
                     if (saleAttr.id === currentSaleAttr.id) {
                         continue;
@@ -180,28 +182,33 @@ export default {
                         if (result.length === 0) {
                             if (otherIndex === i) {
                                 this.activedMap[saleAttr.id] = -1;
-                                matched = null;
                             }
                             this.disabledMap[saleAttr.id + ':' + i] = true;
                         }
                         // 取消禁用
                         else {
-                            // 如果有交集，并且i为当前高亮的选项时，将交集赋予matched
+                            // 如果有交集，并且i为当前高亮的选项时，进行统计
                             if (otherIndex === i) {
-                                matched = result;
-                            }
-                            else {
-                                matched = null;
+                                for (const skuId of result) {
+                                    if (skuIdMap[skuId]) {
+                                        skuIdMap[skuId]++;
+                                        // 其中当前选中得属性不用统计（当前选中得属性必定会有对应得skuId），所以是-1
+                                        if (skuIdMap[skuId] == this.detail.saleAttrs.length - 1) {
+                                            target = skuId;
+                                        }
+                                    }
+                                    else {
+                                        skuIdMap[skuId] = 1;
+                                    }
+                                }
                             }
                             this.disabledMap[saleAttr.id + ':' + i] = false;
                         }
                     }
                 }
 
-                // 若每个属性都有相同的skuId，则认为是匹配成功【只会有一个】
-                if (matched) {
-                    const skuId = matched[0];
-                    this.getSkuDetail(skuId);
+                if (target) {
+                    this.getSkuDetail(target);
                 }
             }
         }
