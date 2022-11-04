@@ -125,9 +125,6 @@ export default {
             activedMap, disabledMap,
         }
     },
-    // created() {
-    //     console.log(JSON.stringify(this.detail.saleAttrs));
-    // },
     methods: {
         async getSkuDetail(id) {
             const resp = await getSkuDetail(id);

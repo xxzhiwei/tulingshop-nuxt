@@ -5,22 +5,70 @@
         </div>
         <div class="wrapper">
             <div class="container">
-                <div class="login-form">
+                <div class="login-form" v-if="type === 1">
                     <h3>
                         <span class="checked">帐号登录</span>
                     </h3>
                     <div class="input">
-                        <input type="text" placeholder="请输入帐号" v-model="username">
+                        <input type="text" placeholder="请输入帐号" v-model="loginForm.username">
                     </div>
                     <div class="input">
-                        <input type="password" placeholder="请输入密码" v-model="password">
+                        <input type="password" placeholder="请输入密码" v-model="loginForm.password">
                     </div>
                     <div class="btn-box">
                         <a href="javascript:;" class="btn" @click="login">登录</a>
                     </div>
                     <div class="tips">
-                        <div class="sms" @click="register">手机短信登录/注册</div>
-                        <div class="reg" @click="register">立即注册<span>|</span>忘记密码？</div>
+                        <div class="sms">手机短信登录/注册</div>
+                        <div class="reg" @click="switchType">立即注册<span>|</span>忘记密码？</div>
+                    </div>
+                </div>
+                <div class="register-form" v-else>
+                    <h3>
+                        <span class="checked">注册账号</span>
+                    </h3>
+                    <template v-if="registerStep === 1">
+                        <div class="input">
+                            <input type="text" placeholder="请输入帐号" v-model="registerForm.username">
+                        </div>
+                        <div class="input">
+                            <input type="password" placeholder="请输入密码" v-model="registerForm.password">
+                        </div>
+                        <div class="input">
+                            <input type="password" placeholder="请再次输入密码" v-model="registerForm.password2">
+                        </div>
+                        <div style="margin-bottom: 20px;">
+                            <!-- <input type="text" placeholder="请输入生日" v-model="registerForm.username"> -->
+                            <el-date-picker
+                                style="width: 100%;"
+                                v-model="registerForm.birthday"
+                                type="date"
+                                placeholder="请选择出生日期" format="yyyy-MM-dd">
+                            </el-date-picker>
+                        </div>
+
+                        <div style="margin-bottom: 20px;">
+                            <div style="font-size: 14px; margin-right: 15px; color: #606266; display: inline-block;">性别</div>
+                            <el-radio v-model="registerForm.gender" :label="1">男</el-radio>
+                            <el-radio v-model="registerForm.gender" :label="2">女</el-radio>
+                        </div>
+
+                        <div class="btn-box">
+                            <a href="javascript:;" class="btn" @click="next">下一步</a>
+                        </div>
+                    </template>
+                    <template v-else-if="registerStep === 2">
+                        <div class="input">
+                            <input type="text" placeholder="请输入手机号" v-model="registerForm.phone">
+                        </div>
+                        <div class="btn-box" style="display: flex;">
+                            <a href="javascript:;" class="btn" style="margin-right: 15px;" @click="previous">上一步</a>
+                            <a href="javascript:;" class="btn" @click="register">注册</a>
+                        </div>
+                    </template>
+                    <div class="tips">
+                        <div class="sms">手机短信登录/注册</div>
+                        <div class="reg" @click="switchType">立即登录</div>
                     </div>
                 </div>
             </div>
@@ -37,42 +85,97 @@
     </div>
 </template>
 <script>
-// import { mapActions } from "vuex";
-// import { setCookie } from "@/util/support";
-
-// import Qs from "qs";
+import { login, register } from "@/api/user";
 
 export default {
-    // Qs,
     name: "login",
+    layout: "layout-1",
     data() {
         return {
-            username: "",
-            password: "",
-            userId: "",
+            loginForm: {
+                username: "",
+                password: "",
+            },
+            registerForm: {
+                username: "",
+                password: "",
+                password2: "",
+                // nickname: "",
+                phone: "",
+                gender: 1,
+                birthday: ""
+            },
+            registerStep: 1,
+            type: 1 // 1=登录，2=注册
         };
     },
     methods: {
-        login() {
-            let { username, password } = this;
+        async login() {
+            const { username, password } = this.loginForm;
+            if (!username || !password) {
+                return this.$message.error("用户名或密码不能为空");
+            }
 
-            this.$router.push({
-                name: "index",
-                params: {
-                    from: "login",
-                },
-            });
+            const resp = await login(this.loginForm)
+                .catch(err => {
+                    console.log(err);
+                });
+            if (!resp || !resp.code === 0) {
+                return;
+            }
+            this.$message.success("登录成功");
+            this.$router.push({ path: this.redirect || '/' });
+            const { accessToken, refreshToken, payload: user } = resp.data;
+            this.$store.dispatch('user/saveLoginInfo', { accessToken, refreshToken, user });
+            
         },
-        register() {
+        async register() {
+            const { username, password, password2, phone } = this.registerForm;
+
+            if (!username || !password) {
+                return this.$message.error("用户名或密码不能为空");
+            }
+
+            if (password !== password2) {
+                return this.$message.error("输入的密码不一致");
+            }
+
+            if (!phone) {
+                return this.$message.error("手机号不能为空");
+            }
+
+            if (!/^1[3-9]\d{9}$/.test(phone)) {
+                return this.$message.error("手机号格式不正确");
+            }
+            const resp = await register(this.registerForm).catch(error => {
+                console.log(error);
+            });
+            if (!resp || !resp.code == 0) {
+                return;
+            }
             this.$message.success("注册成功");
         },
+        next() {
+            if (this.registerStep < 1) {
+                return;
+            }
+            this.registerStep++;
+        },
+        previous() {
+            if (this.registerStep > 1) {
+                this.registerStep--;
+            }
+        },
+        switchType() {
+            this.type = this.type === 1 ? 2 : 1;
+        }
     },
 };
 </script>
 <style lang="scss">
 .login {
     & > .container {
-        height: 113px;
+        height: 80px;
         img {
             width: auto;
             height: 100%;
@@ -81,22 +184,22 @@ export default {
     .wrapper {
         background: url("/imgs/login-bg.jpg") no-repeat center;
         .container {
-            height: 576px;
-            .login-form {
+            height: 600px;
+            .login-form, .register-form {
                 box-sizing: border-box;
-                padding-left: 31px;
-                padding-right: 31px;
+                padding: 30px;
                 width: 410px;
-                height: 510px;
+                // height: 510px;
                 background-color: #ffffff;
                 position: absolute;
-                bottom: 29px;
+                top: 50%;
                 right: 0;
+                transform: translateY(-50%);
                 h3 {
                     line-height: 23px;
                     font-size: 24px;
                     text-align: center;
-                    margin: 40px auto 49px;
+                    margin: 0 auto 30px;
                     .checked {
                         color: #ff6600;
                     }
@@ -107,14 +210,15 @@ export default {
                 .input {
                     display: inline-block;
                     width: 348px;
-                    height: 50px;
+                    height: 40px;
                     border: 1px solid #e5e5e5;
                     margin-bottom: 20px;
+                    line-height: 40px;
                     input {
                         width: 100%;
                         height: 100%;
                         border: none;
-                        padding: 18px;
+                        padding: 0 15px;
                     }
                 }
                 .btn {
@@ -130,7 +234,8 @@ export default {
                     font-size: 14px;
                     cursor: pointer;
                     .sms {
-                        color: #ff6600;
+                        // color: #ff6600;
+                        color: #fff;
                     }
                     .reg {
                         color: #999999;

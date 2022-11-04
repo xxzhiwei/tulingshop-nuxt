@@ -9,3 +9,12 @@ export function getIntersection(s1, s2) {
     }
     return result;
 }
+
+export function timeout(delay) {
+    return new Promise(resolve => {
+        const timer = setTimeout(() => {
+            clearTimeout(timer)
+            resolve()
+        }, delay * 1000)
+    })
+}
