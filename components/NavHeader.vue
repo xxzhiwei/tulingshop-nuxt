@@ -9,11 +9,17 @@
                     <a href="javascript:;">协议规则</a>
                 </div>
                 <div class="topbar-user">
-                    <a href="javascript:;" v-if="username">{{username}}</a>
-                    <a href="javascript:;" v-if="!username" @click="login">登录</a>
-                    <a href="javascript:;" v-if="username" @click="logout">退出</a>
-                    <a href="/#/order/list" v-if="username">我的订单</a>
-                    <a href="javascript:;" class="my-cart" @click="goToCart"><span class="icon-cart"></span>购物车</a>
+                    <client-only>
+                        <template v-if="logined">
+                            <a href="javascript:;">{{user.username}}</a>
+                            <a href="javascript:;" @click="logout">退出</a>
+                            <a href="/#/order/list">我的订单</a>
+                        </template>
+                        <template v-else>
+                            <a href="javascript:;" @click="login">登录</a>
+                        </template>
+                        <a href="javascript:;" class="my-cart" @click="goToCart"><span class="icon-cart"></span>购物车</a>
+                    </client-only>
                 </div>
             </div>
         </div>
@@ -34,7 +40,8 @@
 </template>
 
 <script>
-//   import {mapState} from 'vuex'
+import { mapState } from 'vuex';
+import { logout } from "@/api/user";
 
 export default {
     name: "nav-header",
@@ -44,23 +51,26 @@ export default {
         };
     },
     computed: {
-        username() {
-            return "this.$store.state.username";
-        },
         cartCount() {
             return "this.$store.state.cartCount";
         },
+        ...mapState('user/', ['user']),
+        logined() {
+            return !!this.user.username;
+        }
     },
     methods: {
         login() {
             this.$router.push("/login");
         },
-        logout() {
-            this.$cookie.set("token", "");
-            this.$cookie.set("username", "");
-            this.$message.success("退出成功");
-            this.$store.dispatch("saveUserName", "");
-            this.$store.dispatch("saveCartCount", "0");
+        async logout() {
+            const resp = await logout();
+            if (resp.code !== 0) {
+                console.error("登出失败：");
+                console.log(resp)
+            }
+            this.$store.dispatch("user/logout");
+            this.$message.warning("退出成功");
         },
         goToCart() {
             this.$router.push("/cart");

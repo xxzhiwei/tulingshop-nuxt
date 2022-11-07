@@ -18,3 +18,30 @@ export function timeout(delay) {
         }, delay * 1000)
     })
 }
+
+// 解析服务端cookies
+export function parseCookies(str) {
+
+    const r = {};
+    if (!str) {
+        return r;
+    }
+
+    for (const item of str.split(";")) {
+        const arr = item.split("=");
+        r[arr[0].trim()] = arr[1].trim();
+    }
+
+    return r;
+}
+
+// 格式化通过cookie传输的字符串【「"」被转为%22，「,」被转为%2C】
+export function parseJson(jsonStr) {
+    return jsonStr.replace(/%22|%2C/g, function (item) {
+        const map = {
+            '%22': '"',
+            '%2C': ','
+        };
+        return map[item];
+    });
+}

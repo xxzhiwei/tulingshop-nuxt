@@ -15,7 +15,7 @@
                     <div class="line"></div>
                     <div class="item-version clearfix" v-for="(item) of detail.saleAttrs" :key="item.id">
                         <h2 style="font-weight: 500;">选择{{item.name}}</h2>
-                        <div class="phone fr"
+                        <div class="phone fl"
                             v-for="(saleAttrItem, index) of item.items"
                             :key="saleAttrItem.value"
                             :class="[{checked: activedMap[item.id] === index, disabled: disabledMap[item.id + ':' + index]}]" @click="onSaleAttrChange(item, saleAttrItem, index)">

@@ -121,10 +121,14 @@ export default {
             params.sort = sort;
         }
 
-        const resp = await getPagination(params);
+        
+        const resp = await getPagination(params).catch(error => {
+            console.log(error);
+        });
         if (resp.code !== 0) {
             throw new Error("获取数据失败");
         }
+
         const { records, total, brands, categories } = resp.data;
         let brandActived = 0, categoryActived = 0, orderActived;
         const conditions = [];
@@ -189,6 +193,21 @@ export default {
             sort: +sort,
             PRICE_TEXT
         };
+
+        // return {
+        //     list: [],
+        //     brandList: [],
+        //     categoryList: [],
+        //     keywords,
+        //     total: 0,
+        //     brandActived: 1,
+        //     categoryActived: 1,
+        //     orderList: [],
+        //     orderActived: 1,
+        //     conditions: [],
+        //     sort: 1,
+        //     PRICE_TEXT
+        // };
     },
     methods: {
         onBrandChange(index, item) {

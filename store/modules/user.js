@@ -1,32 +1,25 @@
-let user = {
-    username: "",
-    avatar: ""
-};
+import jsCookie from 'js-cookie';
+
+// let user = {
+//     username: "",
+//     avatar: ""
+// };
 
 
 const state = () => {
-    if (!process.client) {
-        return {
-            refreshToken: "",
-            accessToken: "",
-            name: "",
-            avatar: "",
-            user: user
-        };
-    }
-    // 客户端时，再次初始化数据
-    const accessToken = window.localStorage.getItem("accessToken");
-    const refreshToken = window.localStorage.getItem("refreshToken");
-    const userJson = window.localStorage.getItem("user");
-    if (userJson) {
-        user = JSON.parse(userJson);
-    }
+    // const accessToken = jsCookie.get("accessToken");
+    // const refreshToken = jsCookie.get("refreshToken");
+    // let _user = { ...user };
+    // const userJson = jsCookie.get("user");
+
+    // if (userJson) {
+    //     _user = JSON.parse(userJson);
+    // }
+
     return {
-        refreshToken: refreshToken,
-        accessToken: accessToken,
-        name: user.username,
-        avatar: user.avatar,
-        user: user
+        refreshToken: "",
+        accessToken: "",
+        user: {}
     };
 }
 
@@ -37,19 +30,20 @@ const mutations = {
     SET_USER(state, info) {
         const { user } = info;
         state.user = user;
-        state.name = user.username;
-        state.avatar = user.avatar;
-        localStorage.setItem("user", JSON.stringify(user));
+        let jsonStr = JSON.stringify(user);
+        jsCookie.set("user", jsonStr, { expires: 365 });
     },
     SET_REFRESH_TOKEN(state, payload) {
         const { refreshToken } = payload;
         state.refreshToken = refreshToken;
-        localStorage.setItem("refreshToken", refreshToken);
+        // localStorage.setItem("refreshToken", refreshToken);
+        jsCookie.set("refreshToken", refreshToken, { expires: 365 });
     },
     SET_ACCESS_TOKEN(state, payload) {
         const { accessToken } = payload;
         state.accessToken = accessToken;
-        localStorage.setItem("accessToken", accessToken);
+        // localStorage.setItem("accessToken", accessToken);
+        jsCookie.set("accessToken", accessToken, { expires: 365 });
     }
 };
 
@@ -61,7 +55,7 @@ const actions = {
         commit("SET_REFRESH_TOKEN", { refreshToken });
     },
     logout({ commit }) {
-        commit("SET_USER", { user: user });
+        commit("SET_USER", { user: {} });
         commit("SET_ACCESS_TOKEN", { accessToken: "" });
         commit("SET_REFRESH_TOKEN", { refreshToken: "" });
     }

@@ -120,10 +120,10 @@ export default {
                 .catch(err => {
                     console.log(err);
                 });
-            if (!resp || !resp.code === 0) {
+            if (!resp || resp.code !== 0) {
                 return;
             }
-            this.$message.success("登录成功");
+            this.$message.warning("登录成功");
             this.$router.push({ path: this.redirect || '/' });
             const { accessToken, refreshToken, payload: user } = resp.data;
             this.$store.dispatch('user/saveLoginInfo', { accessToken, refreshToken, user });

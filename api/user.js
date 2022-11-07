@@ -30,3 +30,10 @@ export function register(params) {
         data: params
     });
 }
+
+export function getDetail() {
+    return request({
+        url: '/member/detail',
+        method: 'get'
+    });
+}

@@ -36,7 +36,10 @@ export default {
         {
             src: "@/plugins/vue-infinite-scroll", ssr: false
         },
-        // '~/plugins/axios'
+        // {
+        //     src: "@/plugins/vuex-init", ssr: false
+        // },
+        // '~/plugins/vuex-init'
     ],
 
     // Auto import components: https://go.nuxtjs.dev/config-components
