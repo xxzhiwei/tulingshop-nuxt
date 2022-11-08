@@ -22,6 +22,9 @@
                             {{saleAttrItem.value}}
                         </div>
                     </div>
+                    <div class="item-version clearfix" style="margin-top: 10px; color: #ccc;">
+                        库存量：{{skuDetail.stock || 0}}
+                    </div>
                     <div class="item-total">
                         <div class="phone-info clearfix">
                             
@@ -37,8 +40,8 @@
                         <div class="phone-total">总计：{{skuDetail.price || 0}}元</div>
                     </div>
                     <div class="btn-group">
-                        <a href="javascript:;" class="btn btn-large fl">加入购物车</a>
-                        <a href="javascript:;" class="btn btn-large btn-buy fl">立即购买</a>
+                        <a href="javascript:;" class="btn btn-large fl" @click="addToCart">加入购物车</a>
+                        <a href="javascript:;" class="btn btn-large btn-buy fl" @click="buy">立即购买</a>
                     </div>
 
                     <!-- <div class="after-sale-info">
@@ -89,6 +92,7 @@ import ServiceBar from "@/components/ServiceBar";
 import { getDetail } from "@/api/product";
 import { getDetail as getSkuDetail } from "@/api/sku";
 import { getIntersection } from "@/utils/common";
+import { add } from "@/api/cart";
 
 export default {
     name: "detail",
@@ -111,7 +115,6 @@ export default {
         const activedMap = {};
         // 禁用映射
         const disabledMap = {};
-
         for (const saleAttr of resp.data.saleAttrs) {
             activedMap[saleAttr.id] = -1;
             for (let i=0; i<saleAttr.items.length; i++) {
@@ -122,7 +125,8 @@ export default {
         return {
             detail: resp.data,
             skuDetail: {},
-            activedMap, disabledMap,
+            activedMap,
+            disabledMap,
         }
     },
     methods: {
@@ -145,69 +149,111 @@ export default {
             }
 
             let currentSkuIds = currentSaleAttrItem.skuIds.split(",");
-            // 取消选择时，把禁用状态恢复，其他不变
+
             if (this.activedMap[currentSaleAttr.id] === currentIndex) {
                 this.activedMap[currentSaleAttr.id] = -1;
-                for (let saleAttr of this.detail.saleAttrs) {
-                    // 由于选择当前属性时，不会影响到自己，所以跳过
-                    if (saleAttr.id === currentSaleAttr.id) {
-                        continue;
-                    }
-
-                    for (let i=0; i<saleAttr.items.length; i++) {
-                        if (this.disabledMap[saleAttr.id + ':' + i]) {
-                            this.disabledMap[saleAttr.id + ':' + i] = false;
-                        }
-                    }
-                }
             }
-            // 选择
             else {
                 this.activedMap[currentSaleAttr.id] = currentIndex;
-                const skuIdMap = {}; // 用于统计选中的skuId
-                let target;
-                for (let saleAttr of this.detail.saleAttrs) {
-                    if (saleAttr.id === currentSaleAttr.id) {
-                        continue;
-                    }
-                    // 获取其他属性的高亮选项的下标，并用其的skuIds与currentSaleAttrItem的skuIds取交集，如果交集为空集则取消高亮
-                    const otherIndex = this.activedMap[saleAttr.id];
+            }
 
-                    for (let i=0; i<saleAttr.items.length; i++) {
-                        const result = getIntersection(currentSkuIds, saleAttr.items[i].skuIds.split(","));
-                        // 若没有交集，则取消高亮，并禁用选项
-                        if (result.length === 0) {
-                            if (otherIndex === i) {
-                                this.activedMap[saleAttr.id] = -1;
-                            }
+            const skuIdMap = {}; // 用于统计选中的skuId
+            let target;
+            for (let saleAttr of this.detail.saleAttrs) {
+                if (saleAttr.id === currentSaleAttr.id) {
+                    continue;
+                }
+                // 获取其他属性的高亮选项的下标，并用其的skuIds与currentSaleAttrItem的skuIds取交集，如果交集为空集则取消高亮
+                const otherIndex = this.activedMap[saleAttr.id];
+
+                for (let i=0; i<saleAttr.items.length; i++) {
+                    const otherSkuIds = saleAttr.items[i].skuIds.split(",");
+                    const result = getIntersection(currentSkuIds, otherSkuIds);
+                    // console.log(saleAttr.name, currentSkuIds, otherSkuIds, result, otherIndex);
+                    // 若没有交集，则取消高亮，并禁用选项
+                    if (result.length === 0) {
+                        if (otherIndex === i) {
+                            this.activedMap[saleAttr.id] = -1;
+                        }
+
+                        // 若当前是取消选择时，恢复被禁用
+                        if (this.activedMap[currentSaleAttr.id] === -1) {
+                            this.disabledMap[saleAttr.id + ':' + i] = false;
+                        }
+                        else {
                             this.disabledMap[saleAttr.id + ':' + i] = true;
                         }
-                        // 取消禁用
-                        else {
-                            // 如果有交集，并且i为当前高亮的选项时，进行统计
-                            if (otherIndex === i) {
-                                for (const skuId of result) {
-                                    if (skuIdMap[skuId]) {
-                                        skuIdMap[skuId]++;
-                                        // 其中当前选中得属性不用统计（当前选中得属性必定会有对应得skuId），所以是-1
-                                        if (skuIdMap[skuId] == this.detail.saleAttrs.length - 1) {
-                                            target = skuId;
-                                        }
-                                    }
-                                    else {
-                                        skuIdMap[skuId] = 1;
+                    }
+                    // 取消禁用
+                    else {
+                        // 如果有交集，并且i为当前高亮的选项时，进行统计
+                        if (otherIndex === i) {
+                            for (const skuId of result) {
+                                if (skuIdMap[skuId]) {
+                                    skuIdMap[skuId]++;
+                                    // 其中当前选中得属性不用统计（当前选中得属性必定会有对应得skuId），所以是-1
+                                    if (skuIdMap[skuId] == this.detail.saleAttrs.length - 1) {
+                                        target = skuId;
                                     }
                                 }
+                                else {
+                                    skuIdMap[skuId] = 1;
+                                }
                             }
+                        }
+                        // 已经选中属性，且交集只有一个时，禁用不在skuIdMap中的其他skuId
+                        if (otherIndex !== -1 && otherSkuIds.length === 1 && result.length === 1 && !skuIdMap[result[0]]) {
+                            this.disabledMap[saleAttr.id + ':' + i] = true;
+                        }
+                        else {
                             this.disabledMap[saleAttr.id + ':' + i] = false;
                         }
                     }
                 }
-
-                if (target) {
-                    this.getSkuDetail(target);
-                }
             }
+
+            if (target) {
+                this.getSkuDetail(target);
+            }
+            else {
+                this.skuDetail = {};
+            }
+        },
+
+
+        // 目前还未考虑到商品数量，默认一个
+        async buy() {
+            if (!this.skuDetail.id) {
+                return this.$message.warning("请选择版本");
+            }
+            if (this.skuDetail.stock < 1) {
+                return this.$message.warning("库存量不足，请选择其他版本");
+            }
+            const params = {
+                skuId: this.skuDetail.id,
+                count: 1
+            };
+            // console.log(params);
+            const resp = await add(params);
+
+            if (resp.code !== 0) {
+                return this.$message.warning("购买失败");
+            }
+
+            // 跳转至购物车界面
+            this.$router.push("/cart");
+        },
+        async addToCart() {
+            // const params = {
+            //     skuId: this.detail.id,
+            //     count: 1
+            // };
+            // const resp = await add(params);
+
+            // if (resp.code !== 0) {
+            //     return this.$message.warning("加入购物车失败");
+            // }
+
         }
     },
 };

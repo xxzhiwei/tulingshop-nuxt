@@ -31,9 +31,9 @@ export function register(params) {
     });
 }
 
-export function getDetail() {
-    return request({
-        url: '/member/detail',
-        method: 'get'
-    });
-}
+// export function getDetail() {
+//     return request({
+//         url: '/member/detail',
+//         method: 'get'
+//     });
+// }
