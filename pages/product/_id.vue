@@ -5,7 +5,8 @@
             <div class="container clearfix">
                 <div class="left">
                     <div class="image-wrapper">
-                        <img v-lazy="detail.pic" alt="">
+                        <!-- <img v-lazy="detail.pic" alt=""> -->
+                        <img :src="detail.pic" alt="">
                     </div>
                 </div>
                 <div class="content">
@@ -40,8 +41,8 @@
                         <div class="phone-total">总计：{{skuDetail.price || 0}}元</div>
                     </div>
                     <div class="btn-group">
-                        <a href="javascript:;" class="btn btn-large fl" @click="addToCart">加入购物车</a>
-                        <a href="javascript:;" class="btn btn-large btn-buy fl" @click="buy">立即购买</a>
+                        <span class="btn btn-large fl" @click="addToCart">加入购物车</span>
+                        <span class="btn btn-large btn-buy fl" @click="buy">立即购买</span>
                     </div>
 
                     <!-- <div class="after-sale-info">
@@ -138,7 +139,8 @@ export default {
             this.skuDetail = resp.data;
         },
         /**
-         * 检查每个属性是否都包含『当前选择的属性中的skuId』，如果没有则取消高亮；如果全部销售属性都选中了的情况下（高亮），将会决定一个skuId，此时应该重新向后台请求数据
+         * 检查每个属性是否都包含『当前选择的属性中的skuId』，如果没有则取消高亮；如果全部销售属性都选中了的情况下（高亮），将会决定一个skuId，此时应该重新向后台请求数据；
+         * （这个感觉做复杂了，可以考虑使用更简单的方式，比如说：每个属性始终必须选一个，没有取消选择的状态
          * @param currentSaleAttr 当前销售属性
          * @param currentSaleAttrItem 当前销售属性的选中项
          * @param currentIndex 当前销售属性的选中项的下标
@@ -220,9 +222,8 @@ export default {
             }
         },
 
-
         // 目前还未考虑到商品数量，默认一个
-        async buy() {
+        buy() {
             if (!this.skuDetail.id) {
                 return this.$message.warning("请选择版本");
             }
@@ -233,26 +234,36 @@ export default {
                 skuId: this.skuDetail.id,
                 count: 1
             };
-            // console.log(params);
-            const resp = await add(params);
+            add(params).then(resp => {
+                if (resp.code !== 0) {
+                    return this.$message.warning("购买失败");
+                }
 
-            if (resp.code !== 0) {
-                return this.$message.warning("购买失败");
-            }
-
-            // 跳转至购物车界面
-            this.$router.push("/cart");
+                // 跳转至购物车界面【无法跳转】
+                // 更新：如果是async函数的话，会有问题？
+                // 更新，该问题还存在
+                this.$router.push({
+                    path: "/cart"
+                });
+            });
         },
-        async addToCart() {
-            // const params = {
-            //     skuId: this.detail.id,
-            //     count: 1
-            // };
-            // const resp = await add(params);
-
-            // if (resp.code !== 0) {
-            //     return this.$message.warning("加入购物车失败");
-            // }
+        addToCart() {
+            if (!this.skuDetail.id) {
+                return this.$message.warning("请选择版本");
+            }
+            if (this.skuDetail.stock < 1) {
+                return this.$message.warning("库存量不足，请选择其他版本");
+            }
+            const params = {
+                skuId: this.skuDetail.id,
+                count: 1
+            };
+            add(params).then(resp => {
+                if (resp.code !== 0) {
+                    return this.$message.warning("添加失败");
+                }
+                return this.$message.warning("添加成功");
+            });
 
         }
     },

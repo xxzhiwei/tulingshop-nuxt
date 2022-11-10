@@ -1,0 +1,15 @@
+.x-button-1 {
+    background-color: #fff;
+    border-color: #FF6600;
+    background-color: #FF6600;
+    &:hover {
+        border-color: #FF6600;
+        background-color: #FF6600;
+    }
+}
+
+.x-dialog-1 {
+    .el-dialog__headerbtn:hover .el-dialog__close {
+        color: #FF6600;
+    }
+}

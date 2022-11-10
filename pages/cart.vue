@@ -8,17 +8,17 @@
         <div class="wrapper">
             <div class="container">
                 <div class="cart-box">
-                    <el-row style="line-height: 80px;">
+                    <el-row style="line-height: 80px; border-bottom: 1px solid #f0f0f0; margin-bottom: 20px;">
                         <el-col :span="2">
-                            <el-checkbox class="x-checkbox" v-model="allChecked" size="medium">全选</el-checkbox>
+                            <el-checkbox class="x-checkbox" v-model="allChecked" @change="handleAllChange" size="medium">全选</el-checkbox>
                         </el-col>
-                        <el-col :span="9">
+                        <el-col :span="9" style="text-align: left;">
                             <li>商品名称</li>
                         </el-col>
                         <el-col :span="3">
                             <li>单价</li>
                         </el-col>
-                        <el-col :span="5">
+                        <el-col :span="5" style="text-align: center;">
                             <li>数量</li>
                         </el-col>
                         <el-col :span="3">
@@ -28,13 +28,13 @@
                             <div>操作</div>
                         </el-col>
                     </el-row>
-                    <ul>
+                    <ul v-if="detail.items.length">
                         <li v-for="(item, index) in detail.items" v-bind:key="index">
                             <el-row style="line-height: 40px;">
                                 <el-col :span="2">
                                     <el-checkbox class="x-checkbox" size="medium" v-model="item.checked"></el-checkbox>
                                 </el-col>
-                                <el-col :span="9">
+                                <el-col :span="9" style="text-align: left;">
                                     <img style="height: 40px; width: 40px; vertical-align: middle;" v-lazy="item.productPic" alt="">
                                     <span>{{item.title}}</span>
                                 </el-col>
@@ -42,18 +42,21 @@
                                     <div>{{item.price}}</div>
                                 </el-col>
                                 <el-col :span="5">
-                                    <el-input-number size="small" v-model="item.count" @change="handleCountChange" :min="1"></el-input-number>
+                                    <el-input-number size="small" v-model="item.count" @change="handleCountChange(item)" :min="1"></el-input-number>
                                     <div style="font-size: 12px;">当前库存：{{item.stock || 0}}</div>
                                 </el-col>
                                 <el-col :span="3">
-                                    <div>{{detail.amount}}</div>
+                                    <div>{{item.count * (item.price * 100) / 100}}</div>
                                 </el-col>
                                  <el-col :span="2">
-                                    <i class="el-icon-close"></i>
+                                    <i class="el-icon-close" style="cursor: pointer;" @click="remove(item)"></i>
                                 </el-col>
                             </el-row>
                         </li>
                     </ul>
+                    <div v-else style="text-align: center; padding-bottom: 20px;">
+                        购物车空空如也
+                    </div>
                 </div>
                 <div class="order-wrap clearfix">
                     <div class="cart-tip fl">
@@ -87,14 +90,18 @@ export default {
         const obj = {
             detail: {
                 items: [],
-                amount: 0,
                 count: 0
             },
             allChecked: false, //是否全选
         };
         if (resp && resp.code === 0) {
-            for (const item of resp.data.items) {
-                item.checked = false;
+            if (resp.data.items === null) {
+                resp.data.items = [];
+            }
+            else {
+                for (const item of resp.data.items) {
+                    item.checked = false;
+                }
             }
             obj.detail = resp.data;
         }
@@ -122,27 +129,70 @@ export default {
         }
     },
     methods: {
-        handleCountChange(...items) {
-            console.log(items);
+        handleCountChange(item) {
+            const params = {
+                skuId: item.skuId,
+                count: item.count
+            };
+            this.updateCount(params);
         },
         // 更新商品数量
-        async updateCount() {
-            // const resp = await updateCount();
+        async updateCount(params) {
+            const resp = await updateCount(params);
+            if (resp.code !== 0) {
+                return this.$message.warning("更新商品数量失败");
+            }
         },
 
         // 移除商品
-        async remove() {
-            // const resp = await remove();
+        remove(item) {
+            this.$confirm("确定要移除当前商品吗", "提示")
+                .then(async () => {
+                    const params = {
+                        skuId: item.skuId
+                    };
+                    const resp = await remove(params);
+                    if (resp.code !== 0) {
+                        return this.$message.warning("移除商品失败");
+                    }
+                    this.detail.items = this.detail.items.filter(other => other.id !== item.id);
+                })
+                .catch(() => console.log('cancel'));
         },
 
         // 下单
         async purchase() {
             // const resp = await purchase();
+        },
+        handleAllChange(value) {
+            for (const item of this.detail.items) {
+                item.checked = value;
+            }
         }
     },
 };
 </script>
 <style lang="scss">
+.el-message-box__wrapper {
+    .el-message-box__btns {
+        button:last-child {
+            background-color: #FF6600;
+            border-color: #FF6600;
+        }
+        button:first-child:hover {
+            background-color: #fff;
+            border-color: #FF6600;
+            span {
+                color: #FF6600;
+            }
+        }
+    }
+    .el-message-box__headerbtn:hover .el-message-box__close{
+        color: #FF6600;
+    }
+}
+
+
 .cart {
     .x-checkbox {
         .el-checkbox__inner {
@@ -167,6 +217,7 @@ export default {
             font-size: 14px;
             color: #999999;
             text-align: center;
+            // padding-left: 40px;
             .checkbox {
                 display: inline-block;
                 width: 22px;

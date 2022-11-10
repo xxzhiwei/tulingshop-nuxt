@@ -1,11 +1,11 @@
 <template>
     <div class="order-confirm">
-        <order-header title="订单确认">
+        <order-header title="订单确认" :logoVisible="false" style="padding-top: 0;" :usernameVisible="false">
             <template v-slot:tip>
-                <span>请认真填写收货地址</span>
+                <span>请填写收货地址</span>
             </template>
         </order-header>
-        <svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="position: absolute; width: 0px; height: 0px; overflow: hidden">
+        <!-- <svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="position: absolute; width: 0px; height: 0px; overflow: hidden">
             <defs>
                 <symbol id="icon-add" viewBox="0 0 31 32">
                     <title>add</title>
@@ -23,41 +23,34 @@
                     <path d="M21.677 9.806c-0.569 0-1.032 0.463-1.032 1.032v14.452c0 0.569 0.463 1.032 1.032 1.032s1.032-0.463 1.032-1.032v-14.452c0-0.569-0.463-1.032-1.032-1.032z" class="path4"></path>
                 </symbol>
             </defs>
-        </svg>
+        </svg> -->
         <div class="wrapper">
             <div class="container">
                 <div class="order-box">
                     <div class="item-address">
                         <h2 class="addr-title">收货地址</h2>
                         <div class="addr-list clearfix">
-                            <div class="addr-info" :class="{ checked: index == checkIndex }" @click="checkIndex = index" v-for="(item, index) in list" :key="index">
+                            <div class="addr-info" :class="{ checked: index == checkIndex }" @click="checkIndex = index" v-for="(item, index) in deliveries" :key="index">
                                 <h2>{{ item.name }}</h2>
                                 <div class="phone">{{ item.phoneNumber }}</div>
                                 <div class="street">
-                                    {{
-                    item.province +
-                    " " +
-                    item.city +
-                    " " +
-                    item.region +
-                    " " +
-                    item.detailAddress
-                  }}
+                                    {{item.province}} {{item.city}} {{item.region}} {{item.detailAddress}}
                                 </div>
                                 <div class="action">
-                                    <a href="javascript:;" class="fl" @click="delAddress(item)">
+                                    actions
+                                    <!-- <a href="javascript:;" class="fl">
                                         <svg class="icon icon-del">
                                             <use xlink:href="#icon-del"></use>
                                         </svg>
                                     </a>
-                                    <a href="javascript:;" class="fr" @click="editAddressModal(item)">
+                                    <a href="javascript:;" class="fr">
                                         <svg class="icon icon-edit">
                                             <use xlink:href="#icon-edit"></use>
                                         </svg>
-                                    </a>
+                                    </a> -->
                                 </div>
                             </div>
-                            <div class="addr-add" @click="openAddressModal">
+                            <div class="addr-add" @click="addressDialogVisible = true">
                                 <div class="icon-add"></div>
                                 <div>添加新地址</div>
                             </div>
@@ -65,382 +58,103 @@
                     </div>
                     <div class="item-good">
                         <h2>商品</h2>
-                        <ul>
+                        <!-- <ul>
                             <li v-for="(item, index) in cartList" :key="index">
                                 <div class="good-name">
                                     <img v-lazy="item.productPic" alt="" />
-                                    <span>{{
-                    item.productName + " " + item.productSubTitle
-                  }}</span>
+                                    <span>123</span>
                                 </div>
                                 <div class="good-price">
-                                    {{ item.price }}元x{{ item.quantity }}
+                                    123
                                 </div>
-                                <div class="good-total">{{ item.price * item.quantity }}元</div>
+                                <div class="good-total">123元</div>
                             </li>
-                        </ul>
+                        </ul> -->
                     </div>
                     <div class="detail">
-                        <div class="item" v-if="couponList.length != 0">
-                            <span class="item-name">选择优惠卷：</span>
-                            <select class="selc" v-model="curCouponId" @change="getCouponId()">
-                                <option class="selc" value="0">未选择</option>
-                                <option class="selc" v-for="(x, index) in couponList" :key="index" :value="x.id">
-                                    {{ x.name }}
-                                </option>
-                            </select>
-                        </div>
-
                         <div class="item">
                             <span class="item-name">商品件数：</span>
-                            <span class="item-val">{{ count }}件</span>
+                            <span class="item-val">0件</span>
                         </div>
                         <div class="item">
                             <span class="item-name">商品总价：</span>
-                            <span class="item-val">{{ totalAmount }}元</span>
+                            <span class="item-val">0元</span>
                         </div>
                         <div class="item">
                             <span class="item-name">运费：</span>
-                            <span class="item-val">{{ freightAmount }}元</span>
+                            <span class="item-val">0元</span>
                         </div>
                         <div class="item-total">
                             <span class="item-name">应付总额：</span>
-                            <span class="item-val">{{ calcTotalAmount }}元</span>
+                            <span class="item-val">0元</span>
                         </div>
                     </div>
                     <div class="btn-group">
-                        <a href="/#/cart" class="btn btn-default btn-large">返回购物车</a>
-                        <a href="javascript:;" class="btn btn-large" @click="orderSubmit">提交订单</a>
+                        <a href="/cart" class="btn btn-default btn-large">返回购物车</a>
+                        <a href="javascript:;" class="btn btn-large">提交订单</a>
                     </div>
                 </div>
             </div>
         </div>
-        <modal title="新增确认" btnType="1" :showModal="showEditModal" @cancel="showEditModal = false" @submit="submitAddress">
-            <template v-slot:body>
-                <div class="edit-wrap">
-                    <div class="item">
-                        <input type="text" class="input" placeholder="姓名" v-model="checkedItem.name" />
-                        <input type="text" class="input" placeholder="手机号" v-model="checkedItem.phoneNumber" />
-                    </div>
-                    <div class="item">
-                        <select name="province" v-model="checkedItem.province">
-                            <option :value="item" v-for="(item, i) in Object.keys(pcaList)" :key="i">
-                                {{ item }}
-                            </option>
-                        </select>
-                        <select name="city" v-model="checkedItem.city" v-if="checkedItem.province">
-                            <option :value="item" v-for="(item, i) in Object.keys(pcaList[checkedItem.province])" :key="i">
-                                {{ item }}
-                            </option>
-                        </select>
-                        <select name="region" v-model="checkedItem.region" v-if="checkedItem.city">
-                            <option :value="item" v-for="(item, i) in pcaList[checkedItem.province][
-                  checkedItem.city
-                ]" :key="i">
-                                {{ item }}
-                            </option>
-                        </select>
-                    </div>
-                    <div class="item">
-                        <!-- 1. 引入组件支持 -->
-                        <el-autocomplete class="inline-input" v-model="checkedItem.detailAddress" :fetch-suggestions="querySearch" placeholder="请输入详细地址" :trigger-on-focus="false" @select="handleSelect"></el-autocomplete>
-                    </div>
-                    <div class="item">
-                        <input type="text" class="input" placeholder="邮编" v-model="checkedItem.postCode" />
-                    </div>
-                </div>
-            </template>
-        </modal>
-        <modal title="删除确认" btnType="1" :showModal="showDelModal" @cancel="showDelModal = false" @submit="submitAddress">
-            <template v-slot:body>
-                <p>您确认要删除此地址吗？</p>
-            </template>
-        </modal>
+
+        <el-dialog class="x-dialog-1" title="新增收货方式" :visible.sync="addressDialogVisible" width="35%">
+
+            <el-form ref="form" :model="deliveryFormData" label-width="80px">
+                <el-form-item label="姓名">
+                    <el-input v-model="deliveryFormData.username"></el-input>
+                </el-form-item>
+                <el-form-item label="手机号">
+                    <el-input v-model="deliveryFormData.phone"></el-input>
+                </el-form-item>
+                <el-form-item label="省市区">
+                    <el-cascader
+                        v-model="deliveryFormData.regionStr"
+                        :options="regions">
+                    </el-cascader>
+                </el-form-item>
+                <el-form-item label="详细地址">
+                    <el-input v-model="deliveryFormData.address" type="textarea" :rows="2"></el-input>
+                </el-form-item>
+            </el-form>
+
+            <span slot="footer">
+                <el-button type="primary" class="x-button-1" style="border-radius: 0" @click="addressDialogVisible = false">确 定</el-button>
+            </span>
+        </el-dialog>
     </div>
 </template>
 <script>
 import OrderHeader from "@/components/OrderHeader";
-import Modal from "@/components/Modal";
-// import constStore from "./../store/constStore.js";
-import Qs from "qs";
 export default {
     name: "order-confirm",
     data() {
         return {
-            list: [], //收货地址列表
-            cartList: [], //购物车中需要结算的商品列表
-            cartTotalPrice: 0, //商品总金额
-            count: 0, //商品结算数量
-            checkedItem: {
-                province: "",
-                city: "",
-                region: "",
-            }, //选中的商品对象
-            userAction: "", //用户行为 0：新增 1：编辑 2：删除
-            showDelModal: false, //是否显示删除弹框
-            showEditModal: false, //是否显示新增或者编辑弹框
             checkIndex: 0, //当前收货地址选中索引
-            couponList: [],
-            itemIds: [],
-            activeIndex: 0,
-            totalAmount: 0,
-            freightAmount: 0,
-            //promotionAmount: 50,
-            payAmount: 0,
-            curCouponId: 0,
-            couponAmount: 0,
-            pcaList: {},
+            addressDialogVisible: false,
+            deliveryFormData: {
+                username: "",
+                phone: "",
+                regionStr: ""
+            },
+            regions: [],
+            deliveries: []
         };
     },
-    computed: {
-        calcTotalAmount: function () {
-            return this.payAmount - this.couponAmount;
-        },
-    },
+    computed: {},
     components: {
         OrderHeader,
-        Modal,
     },
     mounted() {
-        //this.getAddressList();
-        // this.getCartList();
-        //this.getCouponList();
-
-        // axios
-        let region = require("@/api/region.json");
-        this.pcaList = region;
+        const regions = require("@/api/region2.json");
+        console.log(regions);
+        // this.regions = regions;
     },
 
-    methods: {
-        querySearch(queryString, cb) {
-            // 获取区域
-            let region =
-                this.checkedItem.province +
-                this.checkedItem.city +
-                this.checkedItem.region;
-            // 请求百度地图web服务api地址
-            let url =
-                "/place/v2/search?query=" +
-                queryString +
-                "&region=" +
-                region +
-                "&output=json&ak=36pLS1ERbTcwTY7yMxfqS7B6Cn63j8sx";
-
-            this.axios
-                .get(url, {
-                    baseURL: "baiduMapApi", // 设置代理前缀
-                })
-                .then((res) => {
-                    // 获得返回的数据
-                    let list = res.results;
-                    // 组装成autoComplete组件所需要的数据结构
-                    let results = [];
-                    list.map((item) => {
-                        results.push({
-                            value: item.name,
-                            address: item.address,
-                            province: item.province,
-                            city: item.city,
-                            area: item.area,
-                        });
-                    });
-                    // 调用 callback 返回建议列表的数据
-                    cb(results);
-                });
-        },
-        handleSelect(item) {
-            this.checkedItem.province = item.province;
-            this.checkedItem.city = item.city;
-            this.checkedItem.region = item.area;
-        },
-        getAddressList() {
-            this.axios.get("/member/address/list").then((res) => {
-                this.list = res;
-            });
-        },
-        // 打开新增地址弹框
-        openAddressModal() {
-            this.userAction = 0;
-            this.checkedItem = {};
-            this.showEditModal = true;
-        },
-        // 打开修改地址弹框
-        editAddressModal(item) {
-            this.userAction = 1;
-            this.checkedItem = item;
-            this.showEditModal = true;
-        },
-        delAddress(item) {
-            this.checkedItem = item;
-            this.userAction = 2;
-            this.showDelModal = true;
-        },
-        // 地址删除、编辑、新增功能
-        submitAddress() {
-            let { checkedItem, userAction } = this;
-            let method,
-                url,
-                params = {};
-            if (userAction == 0) {
-                (method = "post"), (url = "/member/address/add");
-            } else if (userAction == 1) {
-                (method = "post"),
-                    (url = `/member/address/update/${checkedItem.id}`);
-            } else {
-                (method = "post"),
-                    (url = `/member/address/delete/${checkedItem.id}`);
-            }
-            if (userAction == 0 || userAction == 1) {
-                let {
-                    name,
-                    phoneNumber,
-                    province,
-                    city,
-                    region,
-                    detailAddress,
-                    postCode,
-                } = checkedItem;
-                region = checkedItem.region;
-                let errMsg = "";
-                if (!name) {
-                    errMsg = "请输入收货人名称";
-                } else if (!phoneNumber || !/\d{11}/.test(phoneNumber)) {
-                    errMsg = "请输入正确格式的手机号";
-                } else if (!province) {
-                    errMsg = "请选择省份";
-                } else if (!city) {
-                    errMsg = "请选择对应的城市";
-                } else if (!detailAddress || !region) {
-                    errMsg = "请输入收货地址";
-                } else if (!/\d{6}/.test(postCode)) {
-                    errMsg = "请输入六位邮编";
-                }
-
-                if (errMsg) {
-                    this.$message.error(errMsg);
-                    return;
-                }
-                params = {
-                    name,
-                    phoneNumber,
-                    postCode,
-                    province,
-                    city,
-                    region,
-                    detailAddress,
-                };
-            }
-
-            this.axios[method](url, params).then(() => {
-                this.closeModal();
-                this.getAddressList();
-                this.$message.success("操作成功");
-            });
-        },
-        closeModal() {
-            this.checkedItem = {};
-            this.userAction = "";
-            this.showDelModal = false;
-            this.showEditModal = false;
-        },
-        getCartList() {
-            if (
-                constStore.itemids == undefined ||
-                constStore.itemids == null ||
-                constStore.itemids.length == 0
-            ) {
-                this.$message.error("请选择一个产品");
-                this.$router.push("/cart");
-                return;
-            }
-
-            this.axios
-                .post(
-                    "/order/generateConfirmOrder",
-                    Qs.stringify(
-                        { itemIds: constStore.itemids },
-                        { indices: false }
-                    ),
-                    {
-                        headers: {
-                            "Content-Type": "application/x-www-form-urlencoded",
-                        },
-                    }
-                )
-                .then((res) => {
-                    this.cartList = res.cartList;
-                    res.cartList.map((item) => {
-                        this.itemIds.push(item.id);
-                    });
-                    // this.couponAmount=res.
-                    this.totalAmount = res.priceTotal;
-                    this.freightAmount = res.freightAmount;
-                    //优惠 this.promotionAmount=res.calcAmount.promotionAmount;
-                    this.payAmount = res.payAmount;
-                    this.count = res.productTotal;
-
-                    this.list = res.addressList;
-                });
-        },
-        // 订单提交
-        orderSubmit() {
-            let item = this.list[this.checkIndex];
-
-            if (!item) {
-                this.$message.error("请选择一个收货地址");
-                return;
-            }
-
-            // 如果没有选择优惠券
-            if (this.curCouponId == 0) {
-                this.axios
-                    .post("/order/generateOrder", {
-                        itemIds: this.itemIds, // 购物id
-                        memberReceiveAddressId: item.id, // 地址id
-                        //payType: 1,   // 支付宝
-                    })
-                    .then((res) => {
-                        this.$router.push({
-                            path: "/order/pay",
-                            query: {
-                                orderId: res,
-                            },
-                        });
-                    });
-            } else {
-                this.axios
-                    .post("/order/generateOrder", {
-                        couponId: this.curCouponId,
-                        itemIds: this.itemIds,
-                        memberReceiveAddressId: item.id,
-                        payType: 1,
-                    })
-                    .then((res) => {
-                        this.$router.push({
-                            path: "/order/pay",
-                            query: {
-                                orderId: res.order.id,
-                            },
-                        });
-                    });
-            }
-        },
-        getCouponList() {},
-        getCouponId() {
-            if (this.curCouponId == 0) {
-                this.couponAmount = 0;
-            } else {
-                this.couponList.map((citem) => {
-                    if (citem.id == this.curCouponId) {
-                        this.couponAmount = citem.amount;
-                    }
-                });
-            }
-        },
-    },
+    methods: {},
 };
 </script>
 <style lang="scss">
+@import "@/assets/scss/el-ui-cover.scss";
 .order-confirm {
     .wrapper {
         background-color: #f5f5f5;

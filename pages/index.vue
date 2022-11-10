@@ -86,7 +86,7 @@
                                 <div class="item-info">
                                     <h3>{{item.name}}</h3>
                                     <p>{{item.subtitle}}</p>
-                                    <p class="price" @click="buyIt(item.id)">{{item.price}}元</p>
+                                    <p class="price">{{item.price}}元</p>
                                 </div>
                             </div>
                         </div>
@@ -112,7 +112,7 @@
                                 <div class="item-info">
                                     <h3>{{item.name}}</h3>
                                     <p>{{item.subtitle}}</p>
-                                    <p class="price" @click="buyIt(item.id)">{{item.price}}元,<a v-bind:href="item?'/#/product/'+item.id:''">立即抢购</a></p>
+                                    <p class="price">{{item.price}}元,<a v-bind:href="item?'/#/product/'+item.id:''">立即抢购</a></p>
                                 </div>
                             </div>
                         </div>
@@ -121,15 +121,9 @@
             </div>
         </div>
         <service-bar></service-bar>
-        <modal title="提示" sureText="查看购物车" btnType="1" modalType="middle" v-bind:showModal="showModal" v-on:submit="goToCart" v-on:cancel="showModal=false">
-            <template v-slot:body>
-                <p>商品添加成功！</p>
-            </template>
-        </modal>
     </div>
 </template>
 <script>
-import { mapActions } from "vuex";
 import ServiceBar from "@/components/ServiceBar";
 import Modal from "@/components/Modal";
 
@@ -152,7 +146,13 @@ export default {
         ServiceBar,
         Modal,
     },
-    data() {
+    async asyncData() {
+        const resp = await getAggregation();
+        if (resp.code !== 0) {
+            throw new Error("获取数据失败");
+        }
+        const { categoryList } = resp.data;
+
         return {
             swiperOption: {
                 autoplay: {
@@ -197,36 +197,6 @@ export default {
                 title: '4',
                 linkUrl: 'http://www.baidu.com'
             }],
-            slideList: [],
-            menuList: [
-                [
-                    {
-                        id: 30,
-                        img: "/imgs/item-box-1.png",
-                        name: "小米CC9",
-                    },
-                    {
-                        id: 31,
-                        img: "/imgs/item-box-2.png",
-                        name: "小米8青春版",
-                    },
-                    {
-                        id: 32,
-                        img: "/imgs/item-box-3.jpg",
-                        name: "Redmi K20 Pro",
-                    },
-                    {
-                        id: 33,
-                        img: "/imgs/item-box-4.jpg",
-                        name: "移动4G专区",
-                    },
-                ],
-                [0, 0, 0, 0],
-                [0, 0, 0, 0],
-                [0, 0, 0, 0],
-                [0, 0, 0, 0],
-                [0, 0, 0, 0],
-            ],
             adsList: [{
                 id: 1,
                 imageUrl: ad1,
@@ -245,53 +215,18 @@ export default {
             }],
             phoneList: [],
             flashpromotion: [],
-            showModal: false,
-            cateList: [],
-            categoryList: []
+            categoryList
         };
     },
-    mounted() {
-        // this.init();
-        this.getAggregation();
-    },
     methods: {
-        async getAggregation() {
-            const resp = await getAggregation();
-            if (resp.code !== 0) {
-                throw new Error("获取数据失败");
-            }
-            const { categoryList } = resp.data;
-            this.categoryList = categoryList;
-        },
-        init() {
-            // this.axios.get("/home/productCateList/0").then((res) => {
-            //     this.cateList = res;
-            // });
-
-            this.axios.get("/home/content").then((res) => {
-                this.slideList = res.advertiseList;
-                this.adsList = res.advertiseList;
-                this.phoneList = [
-                    res.newProductList.slice(0, 4),
-                    res.hotProductList.slice(0, 4),
-                ];
-                //this.flashpromotion=[res.homeFlashPromotion.slice(0,4),res.homeFlashPromotion.slice(0,4)];
-            });
-
-            this.saveUserName(getCookie("username"));
-        },
-
-        ...mapActions(["saveUserName"]),
-        goToCart() {
-            this.$router.push("/cart");
-        },
-        getFlashpromotion() {
-            this.flashpromotion = [];
-        },
-        detailProductList() {},
-        buyIt(id) {
-            this.$router.push(`/product/${id}`);
-        },
+        // async getAggregation() {
+        //     const resp = await getAggregation();
+        //     if (resp.code !== 0) {
+        //         throw new Error("获取数据失败");
+        //     }
+        //     const { categoryList } = resp.data;
+        //     this.categoryList = categoryList;
+        // },
     },
 };
 </script>
