@@ -2,7 +2,7 @@
     background-color: #fff;
     border-color: #FF6600;
     background-color: #FF6600;
-    &:hover {
+    &:hover, &:active, &:focus {
         border-color: #FF6600;
         background-color: #FF6600;
     }
@@ -10,6 +10,22 @@
 
 .x-dialog-1 {
     .el-dialog__headerbtn:hover .el-dialog__close {
+        color: #FF6600;
+    }
+    .el-dialog__headerbtn:active .el-dialog__close {
+        color: #FF6600;
+    }
+    .el-dialog__body {
+        padding-bottom: 10px;
+    }
+}
+
+.x-radio-1 {
+    .el-radio__input.is-checked .el-radio__inner {
+        border-color: #FF6600;
+        background-color: #FF6600;
+    }
+    .el-radio__input.is-checked+.el-radio__label {
         color: #FF6600;
     }
 }

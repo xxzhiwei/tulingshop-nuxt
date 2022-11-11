@@ -64,12 +64,101 @@
                         共<span>{{detail.count}}</span>件商品，已选择<span>{{countChecked}}</span>件，总价<span>{{amount}}</span>
                     </div>
                     <div class="total fr">
-                        <a href="javascript:;" class="btn">去结算</a>
+                        <a href="javascript:;" class="btn" @click="confirm">去结算</a>
                     </div>
                 </div>
             </div>
         </div>
         <service-bar></service-bar>
+        <el-dialog class="x-dialog-1" title="确认订单" :visible.sync="confirmationDialogVisible" width="70%">
+            <div class="confirmation-wrapper">
+                <div class="order-box">
+                    <div class="item-address">
+                        <div class="addr-title">收货地址</div>
+                        <div class="addr-list clearfix">
+                            <div class="addr-info" :class="{ checked: index === deliveryChecked }" @click="deliveryChecked = index" v-for="(item, index) in deliveryList" :key="index">
+                                <div style="margin-bottom: 10px;">{{ item.phoneNumber }} {{ item.name }} </div>
+                                <div class="street" style="margin-bottom: 10px;">
+                                    {{item.province}} {{item.city}} {{item.region}} {{item.detailAddress}}
+                                </div>
+                                <div class="action" @click.stop>
+                                    <el-radio class="x-radio-1" @change="setDefault(item, index)" v-model="item.defaultStatus" :label="1">默认地址</el-radio>
+                                    <div style="float: right;">
+                                        <i class="el-icon-delete" style="margin-right: 10px;" @click="delDelivery(item)"></i>
+                                        <i class="el-icon-edit" @click="showDeliveryDialogForUpdating(item)"></i>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="addr-add" @click="showDeliveryDialogForSaving">
+                                <div class="icon-add"></div>
+                                <div>添加新地址</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="item-good">
+                        <div>商品</div>
+                        <ul>
+                            <li style="text-align: right;" v-for="(item, index) in itemChecked" :key="index">
+                                <div class="good-name" style="float: left;">
+                                    <span><i class="el-icon-picture-outline" style="margin-right: 5px;"></i>{{item.title}}</span>
+                                </div>
+                                <div class="good-price" style="display: inline-block; margin-right: 20px;">
+                                    {{item.count}} x {{item.price}}
+                                </div>
+                                <div class="good-total" style="display: inline-block;">= {{item.amount}}元</div>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="detail">
+                        <div class="item">
+                            <span class="item-name">商品件数：</span>
+                            <span class="item-val">{{countChecked}}件</span>
+                        </div>
+                        <div class="item">
+                            <span class="item-name">商品总价：</span>
+                            <span class="item-val">{{amount}}元</span>
+                        </div>
+                        <div class="item">
+                            <span class="item-name">运费：</span>
+                            <span class="item-val">{{countChecked * 2}}元</span>
+                        </div>
+                        <div class="item-total">
+                            <span class="item-name">应付总额：</span>
+                            <span class="item-val">{{amount}}元</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div slot="footer" class="dialog-footer">
+                <el-button class="x-button-1" style="border-radius: 0" type="primary">提交订单</el-button>
+            </div>
+        </el-dialog>
+
+        <el-dialog class="x-dialog-1" title="新增或编辑收货方式" :visible.sync="deliveryDialogVisible" width="35%" append-to-body>
+            <el-form ref="deliveryForm" :model="deliveryFormData" :rules="deliveryRules" label-width="80px">
+                <el-form-item label="姓名" prop="name">
+                    <el-input v-model="deliveryFormData.name" required></el-input>
+                </el-form-item>
+                <el-form-item label="手机号" prop="phoneNumber">
+                    <el-input v-model="deliveryFormData.phoneNumber" required></el-input>
+                </el-form-item>
+                <el-form-item label="省市区">
+                    <el-cascader
+                        ref="pcrCascader"
+                        v-model="pcr"
+                        :options="pcrList" :props="pcrProps" @change="handlePcrChange">
+                    </el-cascader>
+                </el-form-item>
+                <el-form-item label="详细地址" prop="detailAddress">
+                    <el-input v-model="deliveryFormData.detailAddress" type="textarea" :rows="2"></el-input>
+                </el-form-item>
+            </el-form>
+
+            <span slot="footer">
+                <el-button v-if="!deliveryFormData.id" class="x-button-1" type="primary" style="border-radius: 0" @click="saveDelivery">确 定</el-button>
+                <el-button v-else class="x-button-1" type="primary" style="border-radius: 0" @click="updateDelivery">确 定</el-button>
+            </span>
+        </el-dialog>
     </div>
 </template>
 <script>
@@ -77,22 +166,64 @@ import OrderHeader from "@/components/OrderHeader";
 import ServiceBar from "@/components/ServiceBar";
 import { getDetail, updateCount, remove } from "@/api/cart";
 import { purchase } from "@/api/order";
+import { getList as getDeliveryList, save as saveDelivery, update as updateDelivery, del as delDelivery, setDefault } from "@/api/delivery"
+
+const defaultDeliveryFormData = {
+    id: null, // id只有更新时存在
+    name: "",
+    phoneNumber: "",
+    name: "",
+    postCode: "",
+    province: "",
+    city: "",
+    region: "",
+    detailAddress: "",
+    defaultStatus: 0
+};
+
+function phoneValidator(rule, value, callback) {
+    if (!/^1[3-9]\d{9}$/.test(value)) {
+        callback(new Error(rule.message));
+    }
+    else {
+        callback();
+    }
+}
 
 export default {
-    // layout: "layout-1",
     components: {
         OrderHeader,
         ServiceBar,
     },
     async asyncData({ store }) {
         const resp = await getDetail({ store });
-        
         const obj = {
             detail: {
                 items: [],
                 count: 0
             },
             allChecked: false, //是否全选
+            confirmationDialogVisible: false,
+            deliveryDialogVisible: false,
+            deliveryFormData: { ...defaultDeliveryFormData },
+            pcr: [], // 省市区【province&city&region】
+            pcrList: [],
+            deliveryList: [],
+            pcrProps: {
+                value: 'fullname',
+                label: 'fullname',
+                children: 'children'
+            },
+            deliveryChecked: -1,
+            deliveryRules: {
+                name: [
+                    { required: true, message: '不能为空', trigger: 'blur' },
+                ],
+                phoneNumber: [
+                    { required: true, message: '不能为空', trigger: 'blur' },
+                    { validator: phoneValidator, message: '手机号格式不正确', trigger: 'blur' }
+                ]
+            }
         };
         if (resp && resp.code === 0) {
             if (resp.data.items === null) {
@@ -106,6 +237,16 @@ export default {
             obj.detail = resp.data;
         }
         return obj;
+    },
+    watch: {
+        itemChecked(n) {
+            if (n.length === this.detail.items.length) {
+                this.allChecked = true;
+            }
+            else {
+                this.allChecked = false;
+            }
+        }
     },
     computed: {
         itemChecked() {
@@ -128,6 +269,10 @@ export default {
             return amount / 100;
         }
     },
+    mounted() {
+        const pcrList = require("@/api/pcr.json");
+        this.pcrList = pcrList;
+    },
     methods: {
         handleCountChange(item) {
             const params = {
@@ -143,7 +288,6 @@ export default {
                 return this.$message.warning("更新商品数量失败");
             }
         },
-
         // 移除商品
         remove(item) {
             this.$confirm("确定要移除当前商品吗", "提示")
@@ -160,7 +304,7 @@ export default {
                 .catch(() => console.log('cancel'));
         },
 
-        // 下单
+        // 创建订单【显示是购买，但其实并不是】
         async purchase() {
             // const resp = await purchase();
         },
@@ -168,11 +312,125 @@ export default {
             for (const item of this.detail.items) {
                 item.checked = value;
             }
+        },
+        check() {
+            this.$refs.deliveryForm.validate(valid => {
+                if (valid) {
+                    return true;
+                }
+                throw new Error('校验失败');
+            });
+        },
+        async saveDelivery() {
+            try {
+                this.check();
+                const resp = await saveDelivery(this.deliveryFormData);
+
+                if (resp.code !== 0) {
+                    return this.$message.warning("操作失败");
+                }
+                this.$message.warning("操作成功");
+                this.deliveryDialogVisible = false;
+
+                // 重新请求收货地址数据；
+                this.getDeliveryList();
+            } catch (error) {
+                console.log(error);
+            }
+        },
+        // 如果参数长度为3，则为省市区；如果为2，则为省市【要求至少要省市，否则认为是错误的数据】
+        handlePcrChange(pcr) {
+            if (!pcr || pcr.length < 2) {
+                return console.error("pcr参数错误");
+            }
+            const fields = ['province', 'city', 'region'];
+            for (let i=0; i<pcr.length; i++) {
+                this.deliveryFormData[fields[i]] = pcr[i];
+            }
+
+            // 返回的是最后的节点【一个】
+            const checked = this.$refs.pcrCascader.getCheckedNodes()[0];
+            this.deliveryFormData.postCode = checked.data.aid;
+        },
+        // 显示添加收货地址模态框
+        showDeliveryDialogForSaving() {
+            this.deliveryFormData = { ...defaultDeliveryFormData };
+            this.deliveryDialogVisible = true;
+        },
+        // 显示编辑收货地址模态框
+        showDeliveryDialogForUpdating(data) {
+            this.deliveryFormData = { ...data };
+            this.pcr.push(this.deliveryFormData.province, this.deliveryFormData.city);
+            if (this.deliveryFormData.region) {
+                this.pcr.push(this.deliveryFormData.region);
+            }
+            this.deliveryDialogVisible = true;
+        },
+        // 删除收货地址
+        delDelivery(item) {
+            this.$confirm("确定要删除当前收货地址吗", "提示")
+                .then(async () => {
+                    const params = {
+                        id: item.id
+                    };
+                    const resp = await delDelivery(params);
+                    if (resp.code !== 0) {
+                        return this.$message.warning("操作失败");
+                    }
+                    this.deliveryList = this.deliveryList.filter(other => other.id !== item.id);
+                })
+                .catch(() => console.log('cancel'));
+        },
+        async updateDelivery() {
+            const resp = updateDelivery(this.deliveryFormData);
+            if (resp.code !== 0) {
+                return this.$message.warning("操作失败");
+            }
+            this.deliveryDialogVisible = false;
+            this.getDeliveryList();
+        },
+        // 创建订单前，对订单进行确认【必须勾选购物车中的商品】
+        async confirm() {
+            if (this.detail.items.length === 0) {
+                return this.$message.warning("购物车空空如也");
+            }
+
+            if (this.itemChecked.length === 0) {
+                return this.$message.warning("请先勾选要支付的商品");
+            }
+
+            this.confirmationDialogVisible = true;
+            const deliveryList = await this.getDeliveryList();
+            const defaultIndex = deliveryList.findIndex(item => item.defaultStatus === 1);
+            if (defaultIndex !== -1) {
+                this.deliveryChecked = defaultIndex;
+            }
+        },
+        // 获取收货地址列表
+        async getDeliveryList() {
+            const resp = await getDeliveryList();
+            this.deliveryList = resp.data;
+            return this.deliveryList;
+        },
+        // 设置默认地址
+        async setDefault(item, index) {
+            const params = {
+                id: item.id
+            };
+            const resp = await setDefault(params);
+
+            if (resp.code !== 0) {
+                return this.$message.warning("设置失败");
+            }
+            this.getDeliveryList();
+            this.deliveryChecked = index;
         }
     },
 };
 </script>
 <style lang="scss">
+@import "@/assets/scss/el-ui-cover.scss";
+
 .el-message-box__wrapper {
     .el-message-box__btns {
         button:last-child {
@@ -191,8 +449,6 @@ export default {
         color: #FF6600;
     }
 }
-
-
 .cart {
     .x-checkbox {
         .el-checkbox__inner {
@@ -217,7 +473,6 @@ export default {
             font-size: 14px;
             color: #999999;
             text-align: center;
-            // padding-left: 40px;
             .checkbox {
                 display: inline-block;
                 width: 22px;
@@ -263,6 +518,111 @@ export default {
                     line-height: 50px;
                     font-size: 18px;
                     margin-left: 37px;
+                }
+            }
+        }
+    }
+    .confirmation-wrapper {
+        .order-box {
+            .addr-title {
+                color: #333333;
+                margin-bottom: 21px;
+            }
+            .item-address {
+                .addr-list {
+                    .addr-info,
+                    .addr-add {
+                        box-sizing: border-box;
+                        float: left;
+                        width: 251px;
+                        height: 144px;
+                        border: 1px solid #e5e5e5;
+                        margin-right: 15px;
+                        padding: 15px;
+                        font-size: 14px;
+                        color: #757575;
+                    }
+                    .addr-info {
+                        cursor: pointer;
+                        .street {
+                            height: 3em;
+                            text-overflow: ellipsis;
+                            overflow: hidden;
+                            display: -webkit-box;
+                            -webkit-line-clamp: 2;
+                            -webkit-box-orient: vertical;
+                        }
+                        &.checked {
+                            border: 1px solid #ff6700;
+                        }
+                    }
+                    .addr-add {
+                        text-align: center;
+                        color: #999999;
+                        cursor: pointer;
+                        .icon-add {
+                            width: 30px;
+                            height: 30px;
+                            border-radius: 50%;
+                            background: url("/imgs/icon-add.png") #e0e0e0
+                                no-repeat center;
+                            background-size: 14px;
+                            margin: 0 auto;
+                            margin-top: 30px;
+                            margin-bottom: 10px;
+                        }
+                    }
+                }
+            }
+            .item-good {
+                margin-top: 34px;
+                border-bottom: 1px solid #e5e5e5;
+                padding-bottom: 12px;
+                h2 {
+                    border-bottom: 1px solid #e5e5e5;
+                    padding-bottom: 5px;
+                }
+                li {
+                    height: 40px;
+                    line-height: 40px;
+                    margin-top: 10px;
+                    font-size: 16px;
+                    color: #333333;
+                    .good-total {
+                        color: #ff6600;
+                    }
+                }
+            }
+            .detail {
+                padding-top: 30px;
+                padding-bottom: 10px;
+                border-bottom: 1px solid #f1f1f1;
+                text-align: right;
+                font-size: 16px;
+                color: #666666;
+                .item-val {
+                    color: #ff6700;
+                }
+                .item {
+                    line-height: 15px;
+                    margin-bottom: 12px;
+                }
+                .item-val {
+                    display: inline-block;
+                }
+                .item-total {
+                    .item-val {
+                        font-size: 28px;
+                    }
+                }
+                .selc {
+                    border: 1px solid #ccc;
+                    padding: 7px 7px;
+                    border-radius: 3px;
+                    padding-left: 5px;
+                    padding-bottom: 10px;
+                    font-size: 24;
+                    margin-bottom: 12px;
                 }
             }
         }
