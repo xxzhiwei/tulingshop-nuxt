@@ -1,6 +1,6 @@
 <template>
     <div class="order-list">
-        <order-header title="订单列表">
+        <order-header title="我的订单" :logoVisible="false" style="padding-top: 0;" :usernameVisible="false">
             <template v-slot:tip>
                 <span>请谨防钓鱼链接或诈骗电话，了解更多></span>
             </template>
@@ -8,71 +8,49 @@
         <div class="wrapper">
             <div class="container">
                 <div class="order-box">
-                    <loading v-if="loading"></loading>
-                    <div class="order" v-for="(order,index) in list" :key="index">
-                        <div class="order-title">
-                            <div class="item-info fl">
-                                {{order.createTime}}
-                                <span></span>
-                                {{order.receiverName}}
-                                <span></span>
-                                订单号：{{order.orderSn}}
-                                <span>| 总额:</span>
-                                {{order.totalAmount}}
-                                <span>| 订单状态:</span>
-                                <span v-if="order.status === 0">
-                                    待付款
-                                </span>
-                                <span v-else-if="order.status === 1">
-                                    代发货
-                                </span>
-                                <span v-else-if="order.status === 2">
-                                    已发货
-                                </span>
-                                <span v-else-if="order.status === 3">
-                                    已完成
-                                </span>
-                                <span v-else-if="order.status === 4">
-                                    已关闭
-                                </span>
-                                <span v-else>
-                                    未知状态
-                                </span>
-
-                            </div>
-                            <div class="item-money fr">
-                                <span>应付金额：</span>
-                                <span class="money">{{order.payAmount}}</span>
-                                <span>元</span>
-                            </div>
-
-                        </div>
-                        <div class="order-content clearfix">
-                            <div class="good-box fl">
-                                <div class="good-list" v-for="(item,i) in order.orderItemList" :key="i">
-                                    <div class="good-img">
-                                        <img v-lazy="item.productPic" alt="">
-                                    </div>
-                                    <div class="good-name">
-                                        <div class="p-name">{{item.productName}}</div>
-                                        <div class="p-money">{{item.productPrice + 'X' + item.productQuantity}}元</div>
+                    <el-table
+                        :data="list" stripe style="width: 100%">
+                        <el-table-column type="expand">
+                            <template slot-scope="scope">
+                                <div style="padding-left: 30px;">
+                                    <div>联系电话：{{scope.row.receiverPhone}}</div>
+                                    <div>收货地址：{{scope.row.receiverProvince}} {{scope.row.receiverCity}} {{scope.row.receiverRegion}} {{scope.row.receiverDetailAddress}}</div>
+                                    <div>商品详情：</div>
+                                    <div style="padding-left: 20px;" v-for="(item) in scope.row.items" :key="item.id">
+                                        <div style="display: inline-block; margin-right: 10px;"><i class="el-icon-picture-outline" style="margin-right: 5px;"></i>{{item.productName}}</div>
+                                        <div style="display: inline-block;">{{item.productPrice}} x {{item.productQuantity}} = {{item.productPrice * item.productQuantity}}元</div>
                                     </div>
                                 </div>
-                            </div>
-                            <div class="good-state fr" v-if="order.status == 0">
-                                <a href="javascript:;" @click="goPay(order.id)">去支付</a>
-                            </div>
-                        </div>
-                    </div>
-                    <el-pagination v-if="true" class="pagination" background layout="prev, pager, next" :pageSize="pageSize" :total="total" @current-change="handleChange">
-                    </el-pagination>
-                    <div class="load-more" v-if="false">
-                        <el-button type="primary" :loading="loading" @click="loadMore">加载更多</el-button>
-                    </div>
-                    <div class="scroll-more" v-infinite-scroll="scrollMore" infinite-scroll-disabled="true" infinite-scroll-distance="410" v-if="false">
+                            </template>
+                        </el-table-column>
+                        <el-table-column prop="orderSn" min-width="180" label="订单号"></el-table-column>
+                        <el-table-column prop="receiverName" label="收货人"></el-table-column>
+                        <el-table-column prop="date" label="订单状态" width="120">
+                            <template slot-scope="scope">
+                                {{scope.row.status | statusFilterText}}
+                            </template>
+                        </el-table-column>
+                        <el-table-column prop="totalAmount" label="总额" width="120">
+                            <template slot-scope="scope">
+                                {{scope.row.totalAmount}}元
+                            </template>
+                        </el-table-column>
+                        <el-table-column prop="payAmount" label="应付金额" width="120">
+                            <template slot-scope="scope">
+                                {{scope.row.payAmount}}元
+                            </template>
+                        </el-table-column>
+                        <el-table-column label="操作" width="140" align="center" fixed="right">
+                            <template slot-scope="{ row }">
+                                <el-button v-if="row.status === 0" type="text" class="x-button-1" size="small" @click="pay(row)">去支付</el-button>
+                                <el-button type="text" size="small" class="el-button--danger" @click="del(row)">删除</el-button>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                    <el-pagination class="pagination" background layout="prev, pager, next" :pageSize="listQuery.size" :total="total" @current-change="handleCurrentChange"></el-pagination>
+                    <!-- <div class="scroll-more" v-infinite-scroll="scrollMore" infinite-scroll-disabled="true" infinite-scroll-distance="410" v-if="false">
                         <img src="/imgs/loading-svg/loading-spinning-bubbles.svg" alt="" v-show="loading">
-                    </div>
-                    <no-data v-if="!loading && list.length==0"></no-data>
+                    </div> -->
                 </div>
             </div>
         </div>
@@ -80,119 +58,54 @@
 </template>
 <script>
 import OrderHeader from "@/components/OrderHeader";
-import Loading from "@/components/Loading";
-import NoData from "@/components/NoData";
-import { Pagination, Button } from "element-ui";
-// import infiniteScroll from "vue-infinite-scroll";
-import Qs from "qs";
+import { getPagination } from "@/api/order";
+
+const statusMap = {
+    0: '待付款',
+    1: '待发货',
+    2: '已发货',
+    3: '已完成',
+    4: '已关闭'
+};
+
+// 这种页面，其实不需要ssr
 export default {
-    name: "order-list",
     components: {
-        OrderHeader,
-        Loading,
-        NoData,
-        [Pagination.name]: Pagination,
-        [Button.name]: Button,
+        OrderHeader
     },
-    directives: {
-        // infiniteScroll,
+    filters: {
+        statusFilterText(value) {
+            return statusMap[value] || '未知状态';
+        }
     },
     data() {
         return {
-            loading: false,
             list: [],
-            pageSize: 10,
-            pageNum: 1,
             total: 0,
-            showNextPage: true, //加载更多：是否显示按钮
-            busy: false, //滚动加载，是否触发
+            listQuery: {
+                size: 10,
+                current: 1
+            }
         };
     },
-    mounted() {
-        // this.getOrderList();
+    created() {
+        this.getPagination();
     },
     methods: {
-        getOrderList() {
-            this.loading = true;
-            this.busy = true;
-            this.axios
-                .post(
-                    "/order/list/userOrder",
-                    Qs.stringify({
-                        pageSize: 10,
-                        pageNum: this.pageNum,
-                    }),
-                    {
-                        headers: {
-                            "Content-Type": "application/x-www-form-urlencoded",
-                        },
-                    }
-                )
-                .then((res) => {
-                    this.loading = false;
-                    this.list = res.records;
-                    this.total = res.total;
-                    this.showNextPage = res.hasNextPage;
-                    this.busy = false;
-                })
-                .catch(() => {
-                    this.loading = false;
-                });
+        async getPagination() {
+            const resp = await getPagination(this.listQuery);
+            if (resp.code !== 0) {
+                return this.$message.error("获取数据失败");
+            }
+            this.list = resp.data.records;
+            this.total = resp.data.total;
         },
-        goPay(orderId) {
-            // 三种路由跳转方式
-            // this.$router.push('/order/pay')
-            /*this.$router.push({
-          name:'order-pay',
-          query:{
-            orderNo
-          }
-        })*/
-            this.$router.push({
-                path: "/order/pay",
-                query: {
-                    orderId,
-                },
-            });
+        handleCurrentChange(current) {
+            this.listQuery.current = current;
+            this.getPagination();
         },
-        // 第一种方法：分页器
-        handleChange(pageNum) {
-            this.pageNum = pageNum;
-            this.getOrderList();
-        },
-        // 第二种方法：加载更多按钮
-        loadMore() {
-            this.pageNum++;
-            this.getOrderList();
-        },
-        // 第三种方法：滚动加载，通过npm插件实现
-        scrollMore() {
-            this.busy = true;
-            setTimeout(() => {
-                this.pageNum++;
-                this.getList();
-            }, 500);
-        },
-        // 专门给scrollMore使用
-        getList() {
-            this.loading = true;
-            this.axios
-                .get("/orders", {
-                    params: {
-                        pageSize: 10,
-                        pageNum: this.pageNum,
-                    },
-                })
-                .then((res) => {
-                    this.list = this.list.concat(res.list);
-                    this.loading = false;
-                    if (res.hasNextPage) {
-                        this.busy = false;
-                    } else {
-                        this.busy = true;
-                    }
-                });
-        },
+        pay(row) {},
+        del(row) {}
     },
 };
 </script>
@@ -205,60 +118,8 @@ export default {
         padding-top: 33px;
         padding-bottom: 110px;
         .order-box {
-            .order {
-                @include border();
-                background-color: $colorG;
-                margin-bottom: 31px;
-                &:last-child {
-                    margin-bottom: 0;
-                }
-                .order-title {
-                    @include height(74px);
-                    background-color: $colorK;
-                    padding: 0 43px;
-                    font-size: 16px;
-                    color: $colorC;
-                    .item-info {
-                        span {
-                            margin: 0 9px;
-                        }
-                    }
-                    .money {
-                        font-size: 26px;
-                        color: $colorB;
-                    }
-                }
-                .order-content {
-                    padding: 0 43px;
-                    .good-box {
-                        width: 88%;
-                        .good-list {
-                            display: flex;
-                            align-items: center;
-                            height: 145px;
-                            .good-img {
-                                width: 112px;
-                                img {
-                                    width: 100%;
-                                }
-                            }
-                            .good-name {
-                                font-size: 20px;
-                                color: $colorB;
-                            }
-                        }
-                    }
-                    .good-state {
-                        @include height(145px);
-                        font-size: 20px;
-                        color: $colorA;
-                        a {
-                            color: $colorA;
-                        }
-                    }
-                }
-            }
             .pagination {
+                margin-top: 20px;
                 text-align: right;
             }
             .el-pagination.is-background .el-pager li:not(.disabled).active {
@@ -268,10 +129,11 @@ export default {
                 background-color: #ff6600;
                 border-color: #ff6600;
             }
-            .load-more,
-            .scroll-more {
-                text-align: center;
-            }
+        }
+    }
+    .el-button--danger {
+        span {
+            color: #f56c6c !important;
         }
     }
 }

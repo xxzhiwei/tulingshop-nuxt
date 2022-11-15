@@ -23,7 +23,7 @@
                 </div>
             </div>
         </div>
-        <div class="nav-header">
+        <div class="nav-header" v-if="searchBarVisible">
             <div class="container">
                 <div class="header-logo">
                     <a href="/#/index"></a>
@@ -45,6 +45,12 @@ import { logout } from "@/api/user";
 
 export default {
     name: "nav-header",
+    props: {
+        searchBarVisible: {
+            type: Boolean,
+            default: true
+        }
+    },
     data() {
         return {
             keywords: "",

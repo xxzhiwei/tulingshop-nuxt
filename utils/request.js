@@ -113,6 +113,7 @@ async function respHandler(resp, config) {
         case 40198: {
             // gotoLoginPage(data.message, router.app.$route.fullPath);
             store.commit("user/SET_REFRESH_TOKEN", { refreshToken: "" });
+            store.commit("user/SET_USER", { user: {} });
             break;
         }
         default:

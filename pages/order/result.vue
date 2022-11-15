@@ -1,6 +1,6 @@
 <template>
     <div class="order-pay">
-        <order-header title="订单支付">
+        <order-header title="支付订单" :logoVisible="false" style="padding-top: 0;" :usernameVisible="false">
             <template v-slot:tip>
                 <span>请谨防钓鱼链接或诈骗电话，了解更多</span>
             </template>
@@ -11,178 +11,90 @@
                     <div class="item-order">
                         <div class="icon-succ"></div>
                         <div class="order-info">
-                            <h2>订单提交成功！去付款咯～</h2>
-                            <p>请在<span>{{orderOvertime}}分</span>内完成支付, 超时后将取消订单</p>
-                            <p>收货信息：{{addressInfo}}</p>
+                            <h2>订单提交成功！</h2>
+                            <p>请在<span>120分</span>内完成支付, 超时后将取消订单</p>
+                            <p>收货信息：{{detail.receiverProvince}} {{detail.receiverCity}} {{detail.receiverRegion}} {{detail.detailAddress}} {{detail.receiverPhone}} {{detail.receiverName}}</p>
                         </div>
                         <div class="order-total">
-                            <p>应付总额：<span>{{payment}}</span>元</p>
-                            <p>订单详情<em class="icon-down" :class="{'up':showDetail}" @click="showDetail=!showDetail"></em></p>
+                            <p>应付总额：<span>{{detail.totalAmount}}</span>元</p>
+                            <p @click="detailed = !detailed">订单详情<em :class="detailed ? 'el-icon-arrow-up' : 'el-icon-arrow-down'"></em></p>
                         </div>
                     </div>
-                    <div class="item-detail" v-if="showDetail">
+                    <div class="item-detail" v-if="detailed">
                         <div class="item">
                             <div class="detail-title">订单号：</div>
-                            <div class="detail-info theme-color">{{orderSn}}</div>
+                            <div class="detail-info theme-color">{{detail.orderSn}}</div>
                         </div>
                         <div class="item">
-                            <div class="detail-title">收货信息：</div>
-                            <div class="detail-info">{{addressInfo}}</div>
+                            <div class="detail-title">收货地址：</div>
+                            <div class="detail-info">{{detail.receiverProvince}} {{detail.receiverCity}} {{detail.receiverRegion}} {{detail.receiverDetailAddress}}</div>
+                        </div>
+                        <div class="item">
+                            <div class="detail-title">收货人：</div>
+                            <div class="detail-info">{{detail.receiverPhone}} {{detail.receiverName}}</div>
                         </div>
                         <div class="item good">
                             <div class="detail-title">商品名称：</div>
                             <div class="detail-info">
                                 <ul>
-                                    <li v-for="(item,index) in orderDetail" :key="index">
-                                        <img v-lazy="item.productPic" />{{item.productName}}
+                                    <li v-for="(item) in detail.items" :key="item.id">
+                                        <i class="el-icon-picture-outline" style="margin-right: 5px;"></i> {{item.productName}}
                                     </li>
                                 </ul>
                             </div>
                         </div>
-                        <!-- <div class="item">
-              <div class="detail-title">发票信息：</div>
-              <div class="detail-info">电子发票 个人</div>
-            </div> -->
                     </div>
                 </div>
                 <div class="item-pay">
                     <h3>选择以下支付方式付款</h3>
                     <div class="pay-way">
                         <p>支付平台</p>
-                        <div class="pay pay-ali" @click="paySubmit(1)" :class="{'checked':payType==1}"></div>
-                        <div class="pay pay-wechat" :class="{'checked':payType==2}"></div>
-                    </div>
-                    <div class="pay-way" v-if="showPay && payType==1">
-                        <img :src="payImageQr" />
+                        <div class="pay pay-ali" @click="handleAlipayClick"></div>
+                        <!-- <div class="pay pay-wechat"></div> -->
                     </div>
                 </div>
             </div>
         </div>
-        <scan-pay-code v-if="showPay && payType==2" @close="closePayModal" :img="payImg"></scan-pay-code>
-        <modal title="支付确认" btnType="3" :showModal="showPayModal" sureText="查看订单" cancelText="未支付" @cancel="showPayModal=false" @submit="goOrderList">
-            <template v-slot:body>
-                <p>您确认是否完成支付？</p>
-            </template>
-        </modal>
     </div>
 </template>
 <script>
-import QRCode from "qrcode";
 import OrderHeader from "@/components/OrderHeader";
-import ScanPayCode from "@/components/ScanPayCode";
-import Modal from "@/components/Modal";
-import Qs from "qs";
+import { getDetail } from "@/api/order";
 
-// 下单成功or失败
 export default {
-    name: "order-pay",
-    data() {
+    async asyncData({ query, store, error }) {
+        const { orderSn } = query;
+
+        // 获取订单信息
+        const resp = await getDetail({
+            params: {
+                orderSn: orderSn
+            },
+            store
+        });
+        if (resp.code !== 0) {
+            // throw new Error("获取数据失败");
+            error(resp);
+        }
         return {
-            orderId: this.$route.query.orderId,
-            addressInfo: "", //收货人地址
-            orderDetail: [], //订单详情，包含商品列表
-            showDetail: false, //是否显示订单详情
-            payType: "", //支付类型
-            showPay: false, //是否显示微信支付弹框
-            payImg: "", //微信支付的二维码地址
-            showPayModal: false, //是否显示二次支付确认弹框
-            payment: 0, //订单总金额
-            T: "", //定时器ID
-            payImageQr: "",
-            orderSn: "",
-            orderOvertime: "",
+            paymentType: 1,
+            detail: resp.data,
+            detailed: false
         };
     },
     components: {
         OrderHeader,
-        ScanPayCode,
-        Modal,
     },
     mounted() {
-        // this.getOrderDetail();
     },
     methods: {
-        getOrderDetail() {
-            this.axios
-                .get(`/order/orderDetail?orderId=${this.orderId}`)
-                .then((res) => {
-                    this.orderDetail = res.orderItemList; //订单商品详情
-                    this.addressInfo =
-                        res.receiverProvince +
-                        res.receiverCity +
-                        res.receiverRegion +
-                        res.receiverDetailAddress;
-                    this.payment = res.payAmount;
-                    this.orderSn = res.orderSn;
-                    this.orderOvertime = res.normalOrderOvertime;
-                });
-        },
-        paySubmit(payType) {
-            this.payType = payType;
-            this.showPay = !this.showPay;
-            // 支付宝
-            if (payType == 1) {
-                this.axios
-                    .post(
-                        "/order/tradeQrCode",
-                        Qs.stringify({
-                            orderId: this.orderId,
-                            payType: 1,
-                        }),
-                        {
-                            headers: {
-                                "Content-Type":
-                                    "application/x-www-form-urlencoded",
-                            },
-                        }
-                    )
-                    .then((res) => {
-                        this.payImageQr = "http://localhost:8888" + res;
-                        window.console.log(res);
-                    });
-            } else {
-                // 微信
-                this.axios
-                    .post("/pay", {
-                        orderId: this.orderId,
-                        orderName: "图灵商城基础版",
-                        amount: 0.01, //单位元
-                        payType: 2, //1支付宝，2微信
-                    })
-                    .then((res) => {
-                        QRCode.toDataURL(res.content)
-                            .then((url) => {
-                                this.showPay = true;
-                                this.payImg = url;
-                                this.loopOrderState();
-                            })
-                            .catch(() => {
-                                this.$message.error(
-                                    "微信二维码生成失败，请稍后重试"
-                                );
-                            });
-                    });
-            }
-        },
-        // 关闭微信弹框
-        closePayModal() {
-            this.showPay = false;
-            this.showPayModal = true;
-            clearInterval(this.T);
-        },
-        // 轮询当前订单支付状态
-        loopOrderState() {
-            this.T = setInterval(() => {
-                this.axios.get(`/orders/${this.orderId}`).then((res) => {
-                    if (res.status == 20) {
-                        clearInterval(this.T);
-                        this.goOrderList();
-                    }
-                });
-            }, 1000);
-        },
-        goOrderList() {
-            this.$router.push("/order/list");
+        handleAlipayClick() {
+            this.$router.push({
+                path: '/payment/alipay',
+                query: {
+                    orderSn: this.$route.query.orderSn
+                }
+            });
         },
     },
 };
@@ -211,7 +123,8 @@ export default {
                     margin-right: 40px;
                 }
                 .order-info {
-                    margin-right: 248px;
+                    flex: 3;
+                    // margin-right: 248px;
                     h2 {
                         font-size: 24px;
                         color: #333333;
@@ -225,6 +138,7 @@ export default {
                     }
                 }
                 .order-total {
+                    flex: 3;
                     & > p:first-child {
                         margin-bottom: 30px;
                     }

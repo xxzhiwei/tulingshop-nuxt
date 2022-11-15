@@ -39,11 +39,10 @@ export function clear() {
     });
 }
 
-// 获取购物车详情【非客户端调用的接口，需要手动传递store；这是目前的处理手段
-export function getDetail(params) {
+// 获取购物车详情
+export function getDetail() {
     return request({
         url: '/cart/detail',
-        method: 'get',
-        store: params.store
+        method: 'get'
     });
 }

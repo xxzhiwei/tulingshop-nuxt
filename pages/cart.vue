@@ -130,7 +130,7 @@
                 </div>
             </div>
             <div slot="footer" class="dialog-footer">
-                <el-button class="x-button-1" style="border-radius: 0" type="primary">提交订单</el-button>
+                <el-button class="x-button-1" style="border-radius: 0" type="primary" :disabled="creationDisabled" @click="createOrder">提交订单</el-button>
             </div>
         </el-dialog>
 
@@ -165,7 +165,7 @@
 import OrderHeader from "@/components/OrderHeader";
 import ServiceBar from "@/components/ServiceBar";
 import { getDetail, updateCount, remove } from "@/api/cart";
-import { purchase } from "@/api/order";
+import { create as createOrder } from "@/api/order";
 import { getList as getDeliveryList, save as saveDelivery, update as updateDelivery, del as delDelivery, setDefault } from "@/api/delivery"
 
 const defaultDeliveryFormData = {
@@ -195,9 +195,8 @@ export default {
         OrderHeader,
         ServiceBar,
     },
-    async asyncData({ store }) {
-        const resp = await getDetail({ store });
-        const obj = {
+    data() {
+        return {
             detail: {
                 items: [],
                 count: 0
@@ -223,24 +222,13 @@ export default {
                     { required: true, message: '不能为空', trigger: 'blur' },
                     { validator: phoneValidator, message: '手机号格式不正确', trigger: 'blur' }
                 ]
-            }
+            },
+            creationDisabled: false
         };
-        if (resp && resp.code === 0) {
-            if (resp.data.items === null) {
-                resp.data.items = [];
-            }
-            else {
-                for (const item of resp.data.items) {
-                    item.checked = false;
-                }
-            }
-            obj.detail = resp.data;
-        }
-        return obj;
     },
     watch: {
         itemChecked(n) {
-            if (n.length === this.detail.items.length) {
+            if (n.length !== 0 && n.length === this.detail.items.length) {
                 this.allChecked = true;
             }
             else {
@@ -265,7 +253,6 @@ export default {
             for (const item of this.itemChecked) {
                 amount += item.count * (item.price * 100);
             }
-            
             return amount / 100;
         }
     },
@@ -273,7 +260,27 @@ export default {
         const pcrList = require("@/api/pcr.json");
         this.pcrList = pcrList;
     },
+    created() {
+        this.getDetail();
+    },
     methods: {
+        async getDetail() {
+            const resp = await getDetail();
+
+            if (resp.code !== 0) {
+                return this.$message.warning("获取购物车信息失败");
+            }
+
+            if (resp.data.items === null) {
+                resp.data.items = [];
+            }
+            else {
+                for (const item of resp.data.items) {
+                    item.checked = false;
+                }
+            }
+            this.detail = resp.data;
+        },
         handleCountChange(item) {
             const params = {
                 skuId: item.skuId,
@@ -424,6 +431,26 @@ export default {
             }
             this.getDeliveryList();
             this.deliveryChecked = index;
+        },
+        async createOrder() {
+            this.disabled = true;
+            const params = {
+                skuIds: this.itemChecked.map(item => item.skuId),
+                delivery: this.deliveryList[this.deliveryChecked]
+            };
+            const resp = await createOrder(params);
+            this.confirmationDialogVisible = false;
+            this.creationDisabled = false;
+            if (resp.code !== 0) {
+                return this.$message.warning("下单失败");
+            }
+            this.getDetail();
+            this.$router.push({
+                path: "/order/result",
+                query: {
+                    orderSn: resp.data
+                }
+            });
         }
     },
 };

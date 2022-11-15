@@ -1,42 +1,40 @@
 <template>
-    <div class="ali-pay">
-        <loading v-if="loading"></loading>
-        <div class="form" v-html="content"></div>
+    <div style="min-height: 400px;">
+        <div ref="content" v-html="content"></div>
     </div>
 </template>
 <script>
-import Loading from "@/components/Loading";
+
+import request from '@/utils/request';
+
+// 1、若订单未支付，则请求支付；
+// 2、已支付，则显示报错信息；
 export default {
-    name: "alipay",
-    components: {
-        Loading,
-    },
-    data() {
+    async asyncData({ query, store, error }) {
+        const orderSn = query.orderSn;
+        const resp = await request({
+            url: '/payment/alipay',
+            method: 'post',
+            data: {
+                orderSn
+            },
+            store
+        });
+
+        if (resp.code !== 0) {
+            error(resp);
+        }
         return {
-            orderId: this.$route.query.orderId,
-            content: "",
-            loading: true,
+            orderSn,
+            content: resp.data
         };
     },
+
     mounted() {
-        // this.paySubmit();
+        // 跳转至支付宝收银台
+        this.$refs.content.children[0].submit();
     },
     methods: {
-        paySubmit() {
-            this.axios
-                .post("/pay", {
-                    orderId: this.orderId,
-                    orderName: "图灵商城",
-                    amount: 0.01, //单位元
-                    payType: 1, //1支付宝，2微信
-                })
-                .then((res) => {
-                    this.content = res.content;
-                    setTimeout(() => {
-                        document.forms[0].submit();
-                    }, 100);
-                });
-        },
     },
 };
 </script>

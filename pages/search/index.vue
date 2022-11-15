@@ -43,7 +43,7 @@
                 </div>
                 <div class="product-wrapper">
                     <div class="item" v-for="(item) in list" v-bind:key="item.id">
-                        <a :href="`/product/${item.id}`" target="_blank">
+                        <a :href="`/product/${item.id}`">
                             <div class="item-img">
                                 <img v-lazy="item.pic" alt="">
                             </div>
