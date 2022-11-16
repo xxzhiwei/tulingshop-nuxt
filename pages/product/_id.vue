@@ -167,6 +167,7 @@ export default {
                 }
                 // 获取其他属性的高亮选项的下标，并用其的skuIds与currentSaleAttrItem的skuIds取交集，如果交集为空集则取消高亮
                 const otherIndex = this.activedMap[saleAttr.id];
+                console.log(otherIndex);
 
                 for (let i=0; i<saleAttr.items.length; i++) {
                     const otherSkuIds = saleAttr.items[i].skuIds.split(",");
@@ -190,16 +191,18 @@ export default {
                     else {
                         // 如果有交集，并且i为当前高亮的选项时，进行统计
                         if (otherIndex === i) {
+                            console.log(result);
                             for (const skuId of result) {
                                 if (skuIdMap[skuId]) {
                                     skuIdMap[skuId]++;
-                                    // 其中当前选中得属性不用统计（当前选中得属性必定会有对应得skuId），所以是-1
-                                    if (skuIdMap[skuId] == this.detail.saleAttrs.length - 1) {
-                                        target = skuId;
-                                    }
                                 }
                                 else {
                                     skuIdMap[skuId] = 1;
+                                }
+
+                                // 其中当前选中得属性不用统计（当前选中得属性必定会有对应得skuId），所以是-1
+                                if (skuIdMap[skuId] == (this.detail.saleAttrs.length - 1)) {
+                                    target = skuId;
                                 }
                             }
                         }
@@ -213,7 +216,6 @@ export default {
                     }
                 }
             }
-
             if (target) {
                 this.getSkuDetail(target);
             }

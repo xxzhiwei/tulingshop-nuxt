@@ -1,6 +1,6 @@
 <template>
     <div class="order-pay">
-        <order-header title="支付订单" :logoVisible="false" style="padding-top: 0;" :usernameVisible="false">
+        <order-header title="提交订单" :logoVisible="false" style="padding-top: 0;" :usernameVisible="false">
             <template v-slot:tip>
                 <span>请谨防钓鱼链接或诈骗电话，了解更多</span>
             </template>
@@ -12,7 +12,7 @@
                         <div class="icon-succ"></div>
                         <div class="order-info">
                             <h2>订单提交成功！</h2>
-                            <p>请在<span>120分</span>内完成支付, 超时后将取消订单</p>
+                            <p>请在<span>60分钟</span>内完成支付, 超时后将取消订单</p>
                             <p>收货信息：{{detail.receiverProvince}} {{detail.receiverCity}} {{detail.receiverRegion}} {{detail.detailAddress}} {{detail.receiverPhone}} {{detail.receiverName}}</p>
                         </div>
                         <div class="order-total">
@@ -46,12 +46,8 @@
                     </div>
                 </div>
                 <div class="item-pay">
-                    <h3>选择以下支付方式付款</h3>
-                    <div class="pay-way">
-                        <p>支付平台</p>
-                        <div class="pay pay-ali" @click="handleAlipayClick"></div>
-                        <!-- <div class="pay pay-wechat"></div> -->
-                    </div>
+                    <h3>请选择支付方式</h3>
+                    <PaymentMethod :orderSn="detail.orderSn" />
                 </div>
             </div>
         </div>
@@ -60,6 +56,7 @@
 <script>
 import OrderHeader from "@/components/OrderHeader";
 import { getDetail } from "@/api/order";
+import PaymentMethod from "@/components/PaymentMethod";
 
 export default {
     async asyncData({ query, store, error }) {
@@ -84,18 +81,11 @@ export default {
     },
     components: {
         OrderHeader,
+        PaymentMethod
     },
     mounted() {
     },
     methods: {
-        handleAlipayClick() {
-            this.$router.push({
-                path: '/payment/alipay',
-                query: {
-                    orderSn: this.$route.query.orderSn
-                }
-            });
-        },
     },
 };
 </script>

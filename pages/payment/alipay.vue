@@ -1,5 +1,5 @@
 <template>
-    <div style="min-height: 400px;">
+    <div style="min-height: 400px;" v-loading.fullscreen.lock="fullscreenLoading">
         <div ref="content" v-html="content"></div>
     </div>
 </template>
@@ -26,13 +26,18 @@ export default {
         }
         return {
             orderSn,
-            content: resp.data
+            content: resp.data,
+            fullscreenLoading: true
         };
     },
 
     mounted() {
         // 跳转至支付宝收银台
         this.$refs.content.children[0].submit();
+        let timer = setTimeout(() => {
+            this.fullscreenLoading = false;
+            clearTimeout(timer);
+        }, 2000);
     },
     methods: {
     },

@@ -10,7 +10,7 @@
             <el-result v-else-if="detail.payType !== 0" icon="success" title="支付成功" subTitle="谢谢~">
                 <template slot="extra">
                     <NuxtLink to="/">继续购物</NuxtLink>
-                    <NuxtLink to="/">我的订单</NuxtLink>
+                    <NuxtLink to="/order">我的订单</NuxtLink>
                 </template>
             </el-result>
             <el-result v-else icon="error" title="支付失败" subTitle="非常抱歉，如有问题，请联系客服">

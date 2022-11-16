@@ -13,7 +13,7 @@
                         <template v-if="logined">
                             <a href="javascript:;">{{user.username}}</a>
                             <a href="javascript:;" @click="logout">退出</a>
-                            <a href="/#/order/list">我的订单</a>
+                            <a href="/order">我的订单</a>
                         </template>
                         <template v-else>
                             <a href="javascript:;" @click="login">登录</a>
