@@ -14,12 +14,12 @@
                     <p class="item-info">{{ detail.subTitle }}</p>
                     <div class="item-price">{{ skuDetail.price || detail.price  }}元</div>
                     <div class="line"></div>
-                    <div class="item-version clearfix" v-for="(item) of detail.saleAttrs" :key="item.id">
+                    <div class="item-version clearfix" v-for="(item, saleAttrIndex) of detail.saleAttrs" :key="item.id">
                         <h2 style="font-weight: 500;">选择{{item.name}}</h2>
                         <div class="phone fl"
                             v-for="(saleAttrItem, index) of item.items"
                             :key="saleAttrItem.value"
-                            :class="[{checked: activedMap[item.id] === index, disabled: disabledMap[item.id + ':' + index]}]" @click="onSaleAttrChange(item, saleAttrItem, index)">
+                            :class="[{checked: activedMap[saleAttrIndex] === index, disabled: disabledMap[item.id + ':' + index]}]" @click="handleSaleAttrClick(item, saleAttrIndex, index)">
                             {{saleAttrItem.value}}
                         </div>
                     </div>
@@ -116,8 +116,9 @@ export default {
         const activedMap = {};
         // 禁用映射
         const disabledMap = {};
-        for (const saleAttr of resp.data.saleAttrs) {
-            activedMap[saleAttr.id] = -1;
+        for (let i=0; i<resp.data.saleAttrs.length; i++) {
+            activedMap[i] = -1;
+            const saleAttr = resp.data.saleAttrs[i];
             for (let i=0; i<saleAttr.items.length; i++) {
                 disabledMap[saleAttr.id + ':' + i] = false;
             }
@@ -139,88 +140,85 @@ export default {
             this.skuDetail = resp.data;
         },
         /**
-         * 检查每个属性是否都包含『当前选择的属性中的skuId』，如果没有则取消高亮；如果全部销售属性都选中了的情况下（高亮），将会决定一个skuId，此时应该重新向后台请求数据；
+         * 选择skuId，此时应该重新向后台请求数据；如果没有则取消高亮；如果全部销售属性都选中了的情况下（高亮），
          * （这个感觉做复杂了，可以考虑使用更简单的方式，比如说：每个属性始终必须选一个，没有取消选择的状态
          * @param currentSaleAttr 当前销售属性
-         * @param currentSaleAttrItem 当前销售属性的选中项
-         * @param currentIndex 当前销售属性的选中项的下标
+         * @param currentSaleAttrIndex 当前销售属性的下标
+         * @param currentIndex 当前销售属性的item的下标
          */
-        onSaleAttrChange(currentSaleAttr, currentSaleAttrItem, currentIndex) {
+        handleSaleAttrClick(currentSaleAttr, currentSaleAttrIndex, currentIndex) {
             if (this.disabledMap[currentSaleAttr.id + ':' + currentIndex]) {
                 return;
             }
 
-            let currentSkuIds = currentSaleAttrItem.skuIds.split(",");
-
-            if (this.activedMap[currentSaleAttr.id] === currentIndex) {
-                this.activedMap[currentSaleAttr.id] = -1;
+            if (this.activedMap[currentSaleAttrIndex] === currentIndex) {
+                this.activedMap[currentSaleAttrIndex] = -1;
             }
             else {
-                this.activedMap[currentSaleAttr.id] = currentIndex;
+                this.activedMap[currentSaleAttrIndex] = currentIndex;
             }
 
-            const skuIdMap = {}; // 用于统计选中的skuId
-            let target;
-            for (let saleAttr of this.detail.saleAttrs) {
-                if (saleAttr.id === currentSaleAttr.id) {
-                    continue;
-                }
-                // 获取其他属性的高亮选项的下标，并用其的skuIds与currentSaleAttrItem的skuIds取交集，如果交集为空集则取消高亮
-                const otherIndex = this.activedMap[saleAttr.id];
-                console.log(otherIndex);
-
-                for (let i=0; i<saleAttr.items.length; i++) {
-                    const otherSkuIds = saleAttr.items[i].skuIds.split(",");
-                    const result = getIntersection(currentSkuIds, otherSkuIds);
-                    // console.log(saleAttr.name, currentSkuIds, otherSkuIds, result, otherIndex);
-                    // 若没有交集，则取消高亮，并禁用选项
-                    if (result.length === 0) {
-                        if (otherIndex === i) {
-                            this.activedMap[saleAttr.id] = -1;
-                        }
-
-                        // 若当前是取消选择时，恢复被禁用
-                        if (this.activedMap[currentSaleAttr.id] === -1) {
-                            this.disabledMap[saleAttr.id + ':' + i] = false;
+            const skuIdMap = {}; // 存储已选择的属性的skuId，如果其他未选中的项的skuId未包含在其中，则禁用
+            let times = 0;
+            let checked = false;
+            // key是saleAttrs的下标，value是saleAttr.items的下标
+            for (const key in this.activedMap) {
+                const value = this.activedMap[key];
+                if (value !== -1) {
+                    times++;
+                    checked = true;
+                    const saleAttr = this.detail.saleAttrs[key];
+                    for (const skuId of saleAttr.items[value].skuIds.split(",")) {
+                        if (skuIdMap[skuId]) {
+                            skuIdMap[skuId]++;
                         }
                         else {
-                            this.disabledMap[saleAttr.id + ':' + i] = true;
+                            skuIdMap[skuId] = 1;
                         }
                     }
-                    // 取消禁用
-                    else {
-                        // 如果有交集，并且i为当前高亮的选项时，进行统计
-                        if (otherIndex === i) {
-                            console.log(result);
-                            for (const skuId of result) {
-                                if (skuIdMap[skuId]) {
-                                    skuIdMap[skuId]++;
-                                }
-                                else {
-                                    skuIdMap[skuId] = 1;
-                                }
+                }
+            }
+            let statistic = []; // 统计已经选择的出现次数大于times的skuId
+            let target;
+            if (checked) {
+                for (const key in skuIdMap) {
+                    if (skuIdMap[key] === times) {
+                        statistic.push(key);
+                    }
+                    // 若某个选中的skuId出现的此时等于销售属性数据长度，则改skuId为目标对象
+                    if (skuIdMap[key] === this.detail.saleAttrs.length) {
+                        target = key;
+                    }
+                }
+            }
 
-                                // 其中当前选中得属性不用统计（当前选中得属性必定会有对应得skuId），所以是-1
-                                if (skuIdMap[skuId] == (this.detail.saleAttrs.length - 1)) {
-                                    target = skuId;
-                                }
+            let outerIndex = 0;
+            for (const saleAttr of this.detail.saleAttrs) {
+                for (let i=0; i<saleAttr.items.length; i++) {
+                    // 跳过当前选项
+                    if (this.activedMap[outerIndex] === i) {
+                        continue;
+                    }
+
+                    let disabled = false;
+                    // 在选中了，而且选项大于1时，才进行禁用检查
+                    if (checked && times > 1) {
+                        if (statistic.length) {
+                            const otherSkuIds = saleAttr.items[i].skuIds.split(",");
+                            const result = getIntersection(statistic, otherSkuIds);
+                            // console.log(statistic, otherSkuIds, "=====>", result);
+                            if (!result.length) {
+                                disabled = true;
                             }
                         }
-                        // 已经选中属性，且交集只有一个时，禁用不在skuIdMap中的其他skuId
-                        if (otherIndex !== -1 && otherSkuIds.length === 1 && result.length === 1 && !skuIdMap[result[0]]) {
-                            this.disabledMap[saleAttr.id + ':' + i] = true;
-                        }
                         else {
-                            this.disabledMap[saleAttr.id + ':' + i] = false;
+                            disabled = true;
                         }
                     }
+                    
+                    this.disabledMap[saleAttr.id + ':' + i] = disabled;
                 }
-            }
-            if (target) {
-                this.getSkuDetail(target);
-            }
-            else {
-                this.skuDetail = {};
+                outerIndex++;
             }
         },
 
