@@ -192,6 +192,16 @@ export default {
                 }
             }
 
+            // 请求sku数据
+            if (target) {
+                this.getSkuDetail(target);
+            }
+            else {
+                if (this.skuDetail.id) {
+                    this.skuDetail = {};
+                }
+            }
+
             let outerIndex = 0;
             for (const saleAttr of this.detail.saleAttrs) {
                 for (let i=0; i<saleAttr.items.length; i++) {
@@ -243,6 +253,7 @@ export default {
                 // 更新：如果是async函数的话，会有问题？
                 // 更新，该问题还存在
                 // 更新：好像是，页面开了多个页面后卡住的？
+                // 更新：当该项目的浏览器tab超过两个，就会卡住
                 this.$router.push({
                     path: "/cart"
                 });

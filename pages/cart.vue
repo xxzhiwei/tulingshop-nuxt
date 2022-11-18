@@ -201,7 +201,7 @@ export default {
                 items: [],
                 count: 0
             },
-            allChecked: false, //是否全选
+            allChecked: false, // 是否全选
             confirmationDialogVisible: false,
             deliveryDialogVisible: false,
             deliveryFormData: { ...defaultDeliveryFormData },
